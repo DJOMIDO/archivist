@@ -1,0 +1,161 @@
+# AGENTS.md
+
+Guidance for AI coding agents (and humans) working on **Archivist**.
+Read this file before doing anything in the repo. The plan lives in [ROADMAP.md](ROADMAP.md).
+
+---
+
+## 1. Project overview
+
+**Archivist** is a personal document Q&A assistant built on Retrieval-Augmented Generation (RAG).
+
+- The user imports their own documents in many formats (PDF, Markdown, TXT, DOCX, HTML, EPUB).
+- Documents are parsed, split into chunks, embedded, and stored in a local vector store.
+- The user asks questions in natural language; an agent retrieves relevant chunks and answers
+  **grounded in those documents, with source citations**.
+
+This is primarily a **learning project**: the owner is applying what they learned in
+LangChain Academy (LangChain + LangGraph). Understanding *why* matters more than shipping fast.
+
+---
+
+## 2. Learning mode — rules for AI agents
+
+These rules override any default "just write the code" behavior.
+
+1. **Guide, don't dump code.** Explain the concept, the design options, their trade-offs, and
+   your recommendation. Prefer interfaces, skeletons, pseudocode, and hints over full implementations.
+2. **Write complete code only when the user explicitly asks for it.** Even then, explain the key
+   decisions in it.
+3. **Review the user's code** when asked: correctness, LangChain/LangGraph idioms, edge cases,
+   naming, testability. Point to the relevant concept or docs rather than silently rewriting.
+4. **Call out pitfalls proactively** (e.g., chunk size vs. context window, metadata loss during
+   splitting, embedding cost, API-key leakage, non-deterministic tests).
+5. **One step at a time.** Break each milestone into small, verifiable steps; confirm a step works
+   before moving on.
+6. **Language:** talk to the user in **Chinese**; write code, comments, docs, branch names, and
+   commit messages in **English**.
+7. **Git is the user's job.** Do not create branches or commits. Instead *suggest* a branch name
+   and a commit message (see §7) whenever a change warrants it.
+8. **Keep the docs alive** (see §8).
+
+---
+
+## 3. Functional requirements
+
+### 3.1 Ingestion
+- Supported formats: **PDF, Markdown, TXT, DOCX, HTML, EPUB** (rolled out across milestones).
+- Ingest a single file or a whole directory (recursive).
+- Attach metadata to every chunk: `source` (path), `file_type`, `page` / `section` when available,
+  `ingested_at`, `content_hash`.
+- **Incremental indexing:** re-ingesting an unchanged file is a no-op; a changed file replaces its
+  old chunks (dedup by content hash).
+- List indexed documents and remove a document (and all its chunks) from the index.
+
+### 3.2 Question answering
+- Answer natural-language questions using only retrieved context.
+- **Cite sources** (file + page/section) for every answer.
+- Say "I don't know / not found in your documents" when the context does not support an answer —
+  no hallucinated answers.
+- Support **multi-turn conversations** (follow-up questions use chat history).
+
+### 3.3 Agent
+- Built with **LangGraph** as an agentic RAG: retriever exposed as a tool, the agent decides
+  whether to retrieve, grades retrieved documents for relevance, and rewrites the query when
+  retrieval is poor.
+- Conversation state persisted via a LangGraph checkpointer.
+
+### 3.4 Interfaces
+- **CLI first:** `ingest`, `ask`, `chat`, `list`, `remove`.
+- **Web UI later:** Streamlit app (upload files, chat, show sources).
+
+---
+
+## 4. Non-functional requirements
+
+- **Local-first:** vector store and document registry persisted on disk.
+- **Secrets:** API keys come from environment / `.env`; `.env` is never committed
+  (provide `.env.example`).
+- **Observability:** LangSmith tracing can be toggled via env vars.
+- **Testability:** core logic (loading, splitting, indexing, retrieval) is unit-testable without
+  network calls; LLM/embedding calls are mockable.
+- **Cost awareness:** batch embedding calls, avoid re-embedding unchanged content.
+- **Configurable:** model names, chunk size/overlap, top-k, storage paths live in one config place.
+
+---
+
+## 5. Tech stack
+
+| Concern            | Choice                                                                  |
+|--------------------|-------------------------------------------------------------------------|
+| Language           | Python **3.12 or 3.13** (pinned via `uv`; 3.14 may lack wheels for some deps) |
+| Env / packaging    | `uv` + `pyproject.toml`                                                 |
+| Framework          | LangChain, LangGraph                                                    |
+| LLM & embeddings   | OpenAI via `langchain-openai`                                           |
+| Vector store       | Chroma (local persistent) via `langchain-chroma`                        |
+| Loaders            | pypdf / PyMuPDF (PDF), docx2txt or Unstructured (DOCX), BeautifulSoup (HTML), EPUB loader; plain readers for MD/TXT |
+| CLI                | Typer                                                                   |
+| Web UI (later)     | Streamlit                                                               |
+| Quality            | pytest, ruff                                                            |
+| Tracing / eval     | LangSmith                                                               |
+
+Pick concrete library versions when a milestone needs them; record notable choices in ROADMAP's changelog.
+
+---
+
+## 6. Proposed architecture
+
+```
+archivist/
+├── src/archivist/
+│   ├── config.py        # settings (env, paths, model names, chunk params)
+│   ├── loaders/         # one loader per format + registry keyed by file extension
+│   ├── splitting.py     # text splitters, metadata preservation
+│   ├── indexing.py      # embeddings, vector store, document registry, dedup
+│   ├── retrieval.py     # retriever construction (similarity / MMR / hybrid)
+│   ├── agent/           # LangGraph state, nodes, graph, prompts
+│   └── cli.py           # Typer commands
+├── tests/
+├── data/                # user documents (git-ignored)
+├── storage/             # vector store + registry (git-ignored)
+├── AGENTS.md
+└── ROADMAP.md
+```
+
+Data flow: **load → split → embed → store** (ingestion) and
+**question → (rewrite) → retrieve → grade → generate with citations** (query).
+
+This layout is a proposal; refine it as milestones are implemented and update this section.
+
+---
+
+## 7. Git workflow
+
+### Branches
+- `main` is the default branch and stays runnable.
+- Branch name format: `<type>/<short-kebab-description>`, e.g. `feat/minimal-rag-pipeline`,
+  `fix/pdf-page-metadata`, `docs/update-roadmap`.
+- Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`, `ci`.
+- One concern per branch; merge back into `main` when the step is done.
+
+### Commits — [Conventional Commits](https://www.conventionalcommits.org/)
+```
+<type>(<optional scope>): <imperative summary, ≤ 72 chars, no period>
+
+<optional body: what and WHY, wrapped at ~72 chars>
+```
+Examples:
+- `feat(loaders): add PDF loader with page metadata`
+- `fix(indexing): skip re-embedding unchanged files`
+- `docs(roadmap): mark M1 as done`
+
+Small, focused commits; each should leave the project in a working state.
+
+---
+
+## 8. Documentation maintenance
+
+- **ROADMAP.md** must be updated whenever the plan changes: task completed, scope added/removed,
+  milestone reordered, or a notable technical decision made (add a changelog entry).
+- **AGENTS.md** must be updated whenever requirements, conventions, tech stack, or architecture change.
+- Doc updates can ship in the same branch as the related change, or in a `docs/...` branch.
