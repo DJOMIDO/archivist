@@ -24,11 +24,15 @@ Large milestones may be split into several smaller branches; record them under t
 **Goal:** a clean, reproducible Python project that runs an empty CLI and an empty test suite.
 **Learning focus:** `uv` workflow, `src/` layout, config & secrets handling.
 
-- [ ] Initialize `uv` project with a pinned Python (3.12 or 3.13)
+- [x] Initialize `uv` project with a pinned Python (3.13)
 - [ ] `pyproject.toml` with project metadata and a console-script entry point
-- [ ] `src/archivist/` package skeleton and `tests/`
-- [ ] `.gitignore` (venv, caches, `.env`, `data/`, `storage/`)
-- [ ] `.env.example` (`OPENAI_API_KEY`, optional LangSmith vars)
+  - [x] Entry point declared; runtime deps `typer`, `pydantic-settings`; dev deps `pytest`, `ruff`
+  - [ ] Real `description` (still the uv placeholder)
+  - [ ] Entry point wired to a Typer app (currently uv's hello-world `main`)
+- [ ] `src/archivist/` package skeleton and `tests/` (package exists; `tests/` not yet)
+- [x] `.gitignore` (venv, caches, `.env`, `data/`, `storage/`)
+- [x] `.env.example` (`OPENAI_API_KEY`, optional LangSmith vars)
+- [x] README with setup and dev commands
 - [ ] Config module that loads settings from env
 - [ ] ruff + pytest configured; one trivial passing test
 
@@ -145,6 +149,10 @@ Large milestones may be split into several smaller branches; record them under t
 ---
 
 ## Changelog
+
+- **2026-10-05** — Default branch is `master` (not `main`); AGENTS.md git workflow updated.
+  Remaining M0 work continues on `chore/project-scaffolding`. OpenAI API not yet funded —
+  not needed for M0; M1 will keep loading/splitting and tests offline (fake embeddings) until it is.
 
 - **2026-10-05** — M0 started. Chose `pydantic-settings` for configuration; M0 deps limited to
   `typer`, `pydantic-settings` (runtime) and `pytest`, `ruff` (dev). LangChain deps deferred to M1.

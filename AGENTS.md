@@ -133,11 +133,11 @@ This layout is a proposal; refine it as milestones are implemented and update th
 ## 7. Git workflow
 
 ### Branches
-- `main` is the default branch and stays runnable.
+- `master` is the default branch and stays runnable.
 - Branch name format: `<type>/<short-kebab-description>`, e.g. `feat/minimal-rag-pipeline`,
   `fix/pdf-page-metadata`, `docs/update-roadmap`.
 - Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`, `ci`.
-- One concern per branch; merge back into `main` when the step is done.
+- One concern per branch; merge back into `master` when the step is done.
 
 ### Commits — [Conventional Commits](https://www.conventionalcommits.org/)
 ```
