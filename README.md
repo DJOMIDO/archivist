@@ -13,13 +13,13 @@ as a learning project.
 
 - [uv](https://docs.astral.sh/uv/)
 - Python 3.13 (installed automatically by uv)
-- An OpenAI API key
+- [Ollama](https://ollama.com/) with a chat model and an embedding model pulled
 
 ## Getting started
 
 ```bash
 uv sync                    # create .venv and install dependencies
-cp .env.example .env       # then fill in your API keys
+cp .env.example .env       # adjust settings if needed
 uv run archivist --help
 ```
 

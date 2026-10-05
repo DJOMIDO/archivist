@@ -31,7 +31,7 @@ Large milestones may be split into several smaller branches; record them under t
   - [ ] Entry point wired to a Typer app (currently uv's hello-world `main`)
 - [ ] `src/archivist/` package skeleton and `tests/` (package exists; `tests/` not yet)
 - [x] `.gitignore` (venv, caches, `.env`, `data/`, `storage/`)
-- [x] `.env.example` (`OPENAI_API_KEY`, optional LangSmith vars)
+- [x] `.env.example` (Ollama URL, optional LangSmith vars)
 - [x] README with setup and dev commands
 - [ ] Config module that loads settings from env
 - [ ] ruff + pytest configured; one trivial passing test
@@ -47,7 +47,8 @@ Large milestones may be split into several smaller branches; record them under t
 
 - [ ] Load `.md` / `.txt` files (single file and directory)
 - [ ] Split into chunks; keep `source` metadata on every chunk
-- [ ] Embed with OpenAI and persist to Chroma
+- [ ] Install Ollama and pull a chat model and an embedding model
+- [ ] Embed with Ollama and persist to Chroma
 - [ ] Build a retriever (top-k similarity)
 - [ ] Answer chain: grounded prompt, "I don't know" fallback, cite sources
 - [ ] CLI: `archivist ingest <path>`, `archivist ask "<question>"`
@@ -114,6 +115,7 @@ Large milestones may be split into several smaller branches; record them under t
 **Learning focus:** chunking strategies, MMR, hybrid search, reranking, metadata filtering.
 
 - [ ] Chunk size / overlap experiments (format-aware splitting, e.g. Markdown headers)
+- [ ] Embedding model comparison (`qwen3-embedding` 0.6b vs 4b vs 8b: quality vs indexing time)
 - [ ] MMR retrieval
 - [ ] Hybrid retrieval (BM25 + vectors)
 - [ ] Reranking step
@@ -143,12 +145,19 @@ Large milestones may be split into several smaller branches; record them under t
 - OCR for scanned PDFs
 - More formats (PPTX, CSV/XLSX, images)
 - LangGraph Studio / LangGraph server deployment
-- Optional local-model support (e.g. Ollama)
+- Optional cloud provider (OpenAI / GitHub Models) selectable via config
 - Watch a folder and auto-ingest changes
 
 ---
 
 ## Changelog
+
+- **2026-10-05** — Default models chosen: chat `qwen3.5:9b-mlx` (fast on Apple Silicon via MLX,
+  supports tools for M4), embeddings `qwen3-embedding:0.6b` (fast re-indexing during experiments).
+  Compare against larger embedding variants (4b / 8b) once the M2 eval exists.
+
+- **2026-10-05** — Switched LLM and embeddings from OpenAI to local **Ollama** (`langchain-ollama`)
+  to avoid paid APIs. Cloud providers moved to backlog as an optional, config-selectable backend.
 
 - **2026-10-05** — Default branch is `master` (not `main`); AGENTS.md git workflow updated.
   Remaining M0 work continues on `chore/project-scaffolding`. OpenAI API not yet funded —

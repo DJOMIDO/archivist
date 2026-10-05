@@ -73,13 +73,15 @@ These rules override any default "just write the code" behavior.
 
 ## 4. Non-functional requirements
 
-- **Local-first:** vector store and document registry persisted on disk.
-- **Secrets:** API keys come from environment / `.env`; `.env` is never committed
+- **Local-first & free:** LLM and embeddings run locally via Ollama (no paid API required);
+  vector store and document registry persisted on disk.
+- **Secrets:** API keys (e.g. LangSmith) come from environment / `.env`; `.env` is never committed
   (provide `.env.example`).
 - **Observability:** LangSmith tracing can be toggled via env vars.
 - **Testability:** core logic (loading, splitting, indexing, retrieval) is unit-testable without
   network calls; LLM/embedding calls are mockable.
-- **Cost awareness:** batch embedding calls, avoid re-embedding unchanged content.
+- **Resource awareness:** batch embedding calls, avoid re-embedding unchanged content
+  (local models are slow on large corpora).
 - **Configurable:** model names, chunk size/overlap, top-k, storage paths live in one config place.
 
 ---
@@ -91,7 +93,8 @@ These rules override any default "just write the code" behavior.
 | Language           | Python **3.12 or 3.13** (pinned via `uv`; 3.14 may lack wheels for some deps) |
 | Env / packaging    | `uv` + `pyproject.toml`                                                 |
 | Framework          | LangChain, LangGraph                                                    |
-| LLM & embeddings   | OpenAI via `langchain-openai`                                           |
+| LLM & embeddings   | Ollama (local) via `langchain-ollama`; provider kept swappable          |
+| Default models     | Chat: `qwen3.5:9b-mlx` (MLX, tool calling). Embeddings: `qwen3-embedding:0.6b` (1024-dim, instruction-aware queries). **Changing the embedding model requires rebuilding the index.** |
 | Vector store       | Chroma (local persistent) via `langchain-chroma`                        |
 | Loaders            | pypdf / PyMuPDF (PDF), docx2txt or Unstructured (DOCX), BeautifulSoup (HTML), EPUB loader; plain readers for MD/TXT |
 | Configuration      | pydantic-settings (typed settings from env / `.env`)                    |
