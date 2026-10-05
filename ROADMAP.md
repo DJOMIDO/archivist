@@ -7,7 +7,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 
 | Milestone | Title                          | Status | Branch                         |
 |-----------|--------------------------------|--------|--------------------------------|
-| M0        | Project scaffolding            | 🟡     | `chore/project-scaffolding`    |
+| M0        | Project scaffolding            | ✅     | `chore/project-scaffolding`    |
 | M1        | Minimal RAG pipeline (MD/TXT)  | ⬜     | `feat/minimal-rag-pipeline`    |
 | M2        | Evaluation baseline            | ⬜     | `feat/eval-baseline`           |
 | M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
@@ -19,22 +19,21 @@ Large milestones may be split into several smaller branches; record them under t
 
 ---
 
-## M0 — Project scaffolding 🟡
+## M0 — Project scaffolding ✅
 
 **Goal:** a clean, reproducible Python project that runs an empty CLI and an empty test suite.
 **Learning focus:** `uv` workflow, `src/` layout, config & secrets handling.
 
 - [x] Initialize `uv` project with a pinned Python (3.13)
-- [ ] `pyproject.toml` with project metadata and a console-script entry point
-  - [x] Entry point declared; runtime deps `typer`, `pydantic-settings`; dev deps `pytest`, `ruff`
-  - [ ] Real `description` (still the uv placeholder)
-  - [ ] Entry point wired to a Typer app (currently uv's hello-world `main`)
-- [ ] `src/archivist/` package skeleton and `tests/` (package exists; `tests/` not yet)
+- [x] `pyproject.toml` with metadata, deps and console-script entry point (`archivist.cli:app`)
+- [x] `src/archivist/` package skeleton and `tests/`
 - [x] `.gitignore` (venv, caches, `.env`, `data/`, `storage/`)
-- [x] `.env.example` (Ollama URL, optional LangSmith vars)
+- [x] `.env.example` (Ollama URL, model, chunking, retrieval settings; optional LangSmith vars)
 - [x] README with setup and dev commands
-- [ ] Config module that loads settings from env
-- [ ] ruff + pytest configured; one trivial passing test
+- [x] Config module (`pydantic-settings`, `ARCHIVIST_` prefix, range + cross-field validation)
+- [x] Typer CLI skeleton with `config` command
+- [x] ruff + pytest configured; config and CLI tests (settings cache cleared per test)
+- [x] VS Code workspace settings: format on save with Ruff
 
 **Done when:** `uv run archivist --help` works and `uv run pytest` passes.
 
@@ -151,6 +150,8 @@ Large milestones may be split into several smaller branches; record them under t
 ---
 
 ## Changelog
+
+- **2026-10-05** — M0 completed: Typer CLI (`archivist config`), ruff/pytest config, 5 passing tests.
 
 - **2026-10-05** — Default models chosen: chat `qwen3.5:9b-mlx` (fast on Apple Silicon via MLX,
   supports tools for M4), embeddings `qwen3-embedding:0.6b` (fast re-indexing during experiments).
