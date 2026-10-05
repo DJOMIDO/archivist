@@ -94,6 +94,7 @@ These rules override any default "just write the code" behavior.
 | LLM & embeddings   | OpenAI via `langchain-openai`                                           |
 | Vector store       | Chroma (local persistent) via `langchain-chroma`                        |
 | Loaders            | pypdf / PyMuPDF (PDF), docx2txt or Unstructured (DOCX), BeautifulSoup (HTML), EPUB loader; plain readers for MD/TXT |
+| Configuration      | pydantic-settings (typed settings from env / `.env`)                    |
 | CLI                | Typer                                                                   |
 | Web UI (later)     | Streamlit                                                               |
 | Quality            | pytest, ruff                                                            |

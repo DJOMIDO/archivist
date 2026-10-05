@@ -7,7 +7,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 
 | Milestone | Title                          | Status | Branch                         |
 |-----------|--------------------------------|--------|--------------------------------|
-| M0        | Project scaffolding            | ⬜     | `chore/project-scaffolding`    |
+| M0        | Project scaffolding            | 🟡     | `chore/project-scaffolding`    |
 | M1        | Minimal RAG pipeline (MD/TXT)  | ⬜     | `feat/minimal-rag-pipeline`    |
 | M2        | Evaluation baseline            | ⬜     | `feat/eval-baseline`           |
 | M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
@@ -19,7 +19,7 @@ Large milestones may be split into several smaller branches; record them under t
 
 ---
 
-## M0 — Project scaffolding ⬜
+## M0 — Project scaffolding 🟡
 
 **Goal:** a clean, reproducible Python project that runs an empty CLI and an empty test suite.
 **Learning focus:** `uv` workflow, `src/` layout, config & secrets handling.
@@ -145,6 +145,9 @@ Large milestones may be split into several smaller branches; record them under t
 ---
 
 ## Changelog
+
+- **2026-10-05** — M0 started. Chose `pydantic-settings` for configuration; M0 deps limited to
+  `typer`, `pydantic-settings` (runtime) and `pytest`, `ruff` (dev). LangChain deps deferred to M1.
 
 - **2026-10-05** — Initial roadmap: milestones M0–M6 and backlog defined. Decisions: OpenAI for LLM
   and embeddings, Chroma as vector store, CLI first then Streamlit, docs in English.
