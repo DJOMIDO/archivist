@@ -45,7 +45,7 @@ Large milestones may be split into several smaller branches; record them under t
 **Learning focus:** Documents, text splitters, embeddings, vector stores, retrievers, prompt + LLM chain (LCEL).
 
 - [x] Load `.md` / `.txt` files (single file and directory; hidden files/dirs skipped)
-- [ ] Split into chunks; keep `source` metadata on every chunk
+- [x] Split into chunks (Chinese/English sentence separators); keep `source` + `start_index` metadata
 - [x] Install Ollama and pull a chat model and an embedding model
 - [ ] Embed with Ollama and persist to Chroma
 - [ ] Build a retriever (top-k similarity)
