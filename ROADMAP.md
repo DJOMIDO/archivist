@@ -8,7 +8,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 | Milestone | Title                          | Status | Branch                         |
 |-----------|--------------------------------|--------|--------------------------------|
 | M0        | Project scaffolding            | ✅     | `chore/project-scaffolding`    |
-| M1        | Minimal RAG pipeline (MD/TXT)  | ⬜     | `feat/minimal-rag-pipeline`    |
+| M1        | Minimal RAG pipeline (MD/TXT)  | 🟡     | `feat/minimal-rag-pipeline`    |
 | M2        | Evaluation baseline            | ⬜     | `feat/eval-baseline`           |
 | M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
 | M4        | Agentic RAG with LangGraph     | ⬜     | `feat/langgraph-agent`         |
@@ -39,14 +39,14 @@ Large milestones may be split into several smaller branches; record them under t
 
 ---
 
-## M1 — Minimal RAG pipeline (MD/TXT) ⬜
+## M1 — Minimal RAG pipeline (MD/TXT) 🟡
 
 **Goal:** end-to-end RAG on plain-text documents from the CLI.
 **Learning focus:** Documents, text splitters, embeddings, vector stores, retrievers, prompt + LLM chain (LCEL).
 
-- [ ] Load `.md` / `.txt` files (single file and directory)
+- [x] Load `.md` / `.txt` files (single file and directory; hidden files/dirs skipped)
 - [ ] Split into chunks; keep `source` metadata on every chunk
-- [ ] Install Ollama and pull a chat model and an embedding model
+- [x] Install Ollama and pull a chat model and an embedding model
 - [ ] Embed with Ollama and persist to Chroma
 - [ ] Build a retriever (top-k similarity)
 - [ ] Answer chain: grounded prompt, "I don't know" fallback, cite sources
