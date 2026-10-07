@@ -47,7 +47,7 @@ Large milestones may be split into several smaller branches; record them under t
 - [x] Load `.md` / `.txt` files (single file and directory; hidden files/dirs skipped)
 - [x] Split into chunks (Chinese/English sentence separators); keep `source` + `start_index` metadata
 - [x] Install Ollama and pull a chat model and an embedding model
-- [ ] Embed with Ollama and persist to Chroma
+- [x] Embed with Ollama and persist to Chroma (stable chunk IDs → idempotent re-ingest)
 - [ ] Build a retriever (top-k similarity)
 - [ ] Answer chain: grounded prompt, "I don't know" fallback, cite sources
 - [ ] CLI: `archivist ingest <path>`, `archivist ask "<question>"`
@@ -115,6 +115,9 @@ Large milestones may be split into several smaller branches; record them under t
 
 - [ ] Chunk size / overlap experiments (format-aware splitting, e.g. Markdown headers)
 - [ ] Embedding model comparison (`qwen3-embedding` 0.6b vs 4b vs 8b: quality vs indexing time)
+- [ ] Qwen3-Embedding query instruction prefix (`Instruct: ...\nQuery:` on queries only); a
+  5-note spot check on 2026-10-07 showed no clear gain, so measure on the M2 eval set first
+- [ ] Calibrate `retrieval_max_distance` from eval data (off by default in M1)
 - [ ] MMR retrieval
 - [ ] Hybrid retrieval (BM25 + vectors)
 - [ ] Reranking step

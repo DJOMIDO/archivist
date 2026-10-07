@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # --- Retrieval ---
     retrieval_top_k: int = Field(default=4, gt=0, le=20)
+    retrieval_max_distance: float | None = Field(default=None, gt=0)
 
     # --- Paths ---
     data_dir: Path = Path("data")

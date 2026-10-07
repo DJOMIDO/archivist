@@ -26,6 +26,9 @@ These rules override any default "just write the code" behavior.
 1. **Teach in lessons.** The owner knows LangChain basics (LangChain Academy) but has little
    background in the surrounding engineering (packaging, testing, data pipelines). Each step is a
    lesson: **purpose → concepts → code → walkthrough → verify → exercise/thinking question → commit**.
+   Within "code", go in three stages: **(a) a minimal standalone script** (a dozen lines, core
+   logic only) → **(b) refactor it into the project module**, explaining every addition →
+   **(c) tests**. The user should see the simplest form before the production form.
 2. **Provide working code, explained.** Give complete, verified code for each step, with a
    walkthrough of *why* each part exists. The user types it in themselves (not copy-paste) and
    then does a small exercise that extends or tests it. Leave room for the user to try first
