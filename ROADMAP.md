@@ -9,6 +9,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 |-----------|--------------------------------|--------|--------------------------------|
 | M0        | Project scaffolding            | ✅     | `chore/project-scaffolding`    |
 | M1        | Minimal RAG pipeline (MD/TXT)  | 🟡     | `feat/minimal-rag-pipeline`    |
+| M1.5      | Local model runtime evaluation | ⬜     | `refactor/openai-compatible-llm-provider` |
 | M2        | Evaluation baseline            | ⬜     | `feat/eval-baseline`           |
 | M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
 | M4        | Agentic RAG with LangGraph     | ⬜     | `feat/langgraph-agent`         |
@@ -54,6 +55,24 @@ Large milestones may be split into several smaller branches; record them under t
 - [ ] Unit tests for loading/splitting (no network)
 
 **Done when:** ingesting a folder of notes and asking a question returns a grounded answer with sources.
+
+---
+
+## M1.5 — Local model runtime evaluation ⬜
+
+**Goal:** stop depending on Ollama specifically (openness and lock-in concerns) by talking to any
+local OpenAI-compatible server.
+**Learning focus:** provider abstraction — only the two model factories should change.
+
+- [ ] Switch `get_embeddings` / `get_chat_model` to `langchain-openai` with a configurable base URL
+- [ ] Evaluate candidates: LM Studio (GUI closed source), `mlx-lm` server (MIT), llama.cpp
+  `llama-server` (MIT)
+- [ ] Go/no-go criteria: thinking can be disabled (answers in ~2–8 s like Ollama today), embedding
+  model loads on demand, API works without a GUI window open
+- [ ] Rebuild the index (different runtime/quantization ⇒ different vectors)
+- [ ] Update AGENTS.md tech stack, README, `.env.example`
+
+**Done when:** the full test suite passes and `ingest` / `ask` work against the chosen runtime.
 
 ---
 
@@ -118,6 +137,8 @@ Large milestones may be split into several smaller branches; record them under t
 - [ ] Qwen3-Embedding query instruction prefix (`Instruct: ...\nQuery:` on queries only); a
   5-note spot check on 2026-10-07 showed no clear gain, so measure on the M2 eval set first
 - [ ] Calibrate `retrieval_max_distance` from eval data (off by default in M1)
+- [ ] Multi-granularity (parent-document) retrieval: match small chunks, give the LLM their
+  enclosing Markdown section; pairs naturally with header-aware splitting
 - [ ] MMR retrieval
 - [ ] Hybrid retrieval (BM25 + vectors)
 - [ ] Reranking step
@@ -154,6 +175,10 @@ Large milestones may be split into several smaller branches; record them under t
 ---
 
 ## Changelog
+
+- **2026-10-08** — Decided to replace Ollama after M1 (attribution, closed-source GUI, cloud
+  pivot, proprietary model store); added M1.5 to evaluate OpenAI-compatible local runtimes.
+  Added multi-granularity retrieval to M5; user feedback on answers moved to Backlog.
 
 - **2026-10-05** — M0 completed: Typer CLI (`archivist config`), ruff/pytest config, 5 passing tests.
 
