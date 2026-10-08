@@ -48,7 +48,7 @@ Large milestones may be split into several smaller branches; record them under t
 - [x] Split into chunks (Chinese/English sentence separators); keep `source` + `start_index` metadata
 - [x] Install Ollama and pull a chat model and an embedding model
 - [x] Embed with Ollama and persist to Chroma (stable chunk IDs → idempotent re-ingest)
-- [ ] Build a retriever (top-k similarity)
+- [x] Build a retriever (top-k similarity with distances; optional max-distance cut-off)
 - [ ] Answer chain: grounded prompt, "I don't know" fallback, cite sources
 - [ ] CLI: `archivist ingest <path>`, `archivist ask "<question>"`
 - [ ] Unit tests for loading/splitting (no network)
@@ -149,6 +149,7 @@ Large milestones may be split into several smaller branches; record them under t
 - LangGraph Studio / LangGraph server deployment
 - Optional cloud provider (OpenAI / GitHub Models) selectable via config
 - Watch a folder and auto-ingest changes
+- User feedback on answers (e.g. `ask` prompts y/n, logged locally) to grow the eval set
 
 ---
 
