@@ -8,7 +8,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 | Milestone | Title                          | Status | Branch                         |
 |-----------|--------------------------------|--------|--------------------------------|
 | M0        | Project scaffolding            | ✅     | `chore/project-scaffolding`    |
-| M1        | Minimal RAG pipeline (MD/TXT)  | 🟡     | `feat/minimal-rag-pipeline`    |
+| M1        | Minimal RAG pipeline (MD/TXT)  | ✅     | `feat/minimal-rag-pipeline`    |
 | M1.5      | Local model runtime evaluation | ⬜     | `refactor/openai-compatible-llm-provider` |
 | M2        | Evaluation baseline            | ⬜     | `feat/eval-baseline`           |
 | M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
@@ -40,7 +40,7 @@ Large milestones may be split into several smaller branches; record them under t
 
 ---
 
-## M1 — Minimal RAG pipeline (MD/TXT) 🟡
+## M1 — Minimal RAG pipeline (MD/TXT) ✅
 
 **Goal:** end-to-end RAG on plain-text documents from the CLI.
 **Learning focus:** Documents, text splitters, embeddings, vector stores, retrievers, prompt + LLM chain (LCEL).
@@ -50,11 +50,15 @@ Large milestones may be split into several smaller branches; record them under t
 - [x] Install Ollama and pull a chat model and an embedding model
 - [x] Embed with Ollama and persist to Chroma (stable chunk IDs → idempotent re-ingest)
 - [x] Build a retriever (top-k similarity with distances; optional max-distance cut-off)
-- [ ] Answer chain: grounded prompt, "I don't know" fallback, cite sources
-- [ ] CLI: `archivist ingest <path>`, `archivist ask "<question>"`
-- [ ] Unit tests for loading/splitting (no network)
+- [x] Answer chain: grounded prompt, "not found" fallback (zh/en), citations mapped to sources in code
+- [x] CLI: `archivist ingest <path>`, `archivist ask "<question>" [--top-k N]` (via `pipeline.py`)
+- [x] Tests for every module plus an offline end-to-end pipeline/CLI test (31 tests, no network)
 
 **Done when:** ingesting a folder of notes and asking a question returns a grounded answer with sources.
+
+**Known limitations (deferred):** with `retrieval_max_distance` unset every question reaches the
+LLM; the small model sometimes cites passages while saying it found nothing (seen with a French
+question); a stopped Ollama shows a raw traceback; sources print as absolute paths.
 
 ---
 
@@ -70,6 +74,7 @@ local OpenAI-compatible server.
 - [ ] Go/no-go criteria: thinking can be disabled (answers in ~2–8 s like Ollama today), embedding
   model loads on demand, API works without a GUI window open
 - [ ] Rebuild the index (different runtime/quantization ⇒ different vectors)
+- [ ] Friendly CLI error when the model server is unreachable (instead of a traceback)
 - [ ] Update AGENTS.md tech stack, README, `.env.example`
 
 **Done when:** the full test suite passes and `ingest` / `ask` work against the chosen runtime.
@@ -137,6 +142,8 @@ local OpenAI-compatible server.
 - [ ] Qwen3-Embedding query instruction prefix (`Instruct: ...\nQuery:` on queries only); a
   5-note spot check on 2026-10-07 showed no clear gain, so measure on the M2 eval set first
 - [ ] Calibrate `retrieval_max_distance` from eval data (off by default in M1)
+- [ ] Structured answer output (`found` flag + text) so a not-found answer can never carry
+  citations, instead of relying on the model to follow the prompt
 - [ ] Multi-granularity (parent-document) retrieval: match small chunks, give the LLM their
   enclosing Markdown section; pairs naturally with header-aware splitting
 - [ ] MMR retrieval
@@ -170,11 +177,15 @@ local OpenAI-compatible server.
 - LangGraph Studio / LangGraph server deployment
 - Optional cloud provider (OpenAI / GitHub Models) selectable via config
 - Watch a folder and auto-ingest changes
+- Show sources as paths relative to the data directory
 - User feedback on answers (e.g. `ask` prompts y/n, logged locally) to grow the eval set
 
 ---
 
 ## Changelog
+
+- **2026-10-09** — M1 completed: `archivist ingest` / `ask` work end to end on local
+  Ollama models. Known limitations recorded under M1 and scheduled into M1.5, M5 and Backlog.
 
 - **2026-10-08** — Decided to replace Ollama after M1 (attribution, closed-source GUI, cloud
   pivot, proprietary model store); added M1.5 to evaluate OpenAI-compatible local runtimes.

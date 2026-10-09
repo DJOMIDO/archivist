@@ -7,7 +7,7 @@ grounded in your files and cite their sources.
 Built with [LangChain](https://python.langchain.com/) and [LangGraph](https://langchain-ai.github.io/langgraph/)
 as a learning project.
 
-> **Status:** early development (M0 — project scaffolding). See [ROADMAP.md](ROADMAP.md).
+> **Status:** M1 done — Markdown/TXT ingestion and grounded Q&A from the CLI. See [ROADMAP.md](ROADMAP.md).
 
 ## Requirements
 
@@ -22,6 +22,18 @@ uv sync                    # create .venv and install dependencies
 cp .env.example .env       # adjust settings if needed
 uv run archivist --help
 ```
+
+## Usage
+
+```bash
+uv run archivist ingest data/                       # load, split, embed and store documents
+uv run archivist ask "How do I make tomato eggs?"   # answer with cited sources
+uv run archivist ask "..." --top-k 2                # override how many chunks are retrieved
+uv run archivist config                             # show the effective settings
+```
+
+Re-ingesting unchanged files does not create duplicates. Settings can be overridden in `.env`
+(see `.env.example`).
 
 ## Development
 

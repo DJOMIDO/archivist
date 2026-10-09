@@ -119,12 +119,14 @@ Pick concrete library versions when a milestone needs them; record notable choic
 archivist/
 ├── src/archivist/
 │   ├── config.py        # settings (env, paths, model names, chunk params)
-│   ├── loaders/         # one loader per format + registry keyed by file extension
+│   ├── loaders.py       # find + load files as Documents (becomes loaders/ package in M3)
 │   ├── splitting.py     # text splitters, metadata preservation
-│   ├── indexing.py      # embeddings, vector store, document registry, dedup
-│   ├── retrieval.py     # retriever construction (similarity / MMR / hybrid)
-│   ├── agent/           # LangGraph state, nodes, graph, prompts
-│   └── cli.py           # Typer commands
+│   ├── indexing.py      # embedding/vector-store factories, stable chunk IDs (registry in M3)
+│   ├── retrieval.py     # top-k search with distances (MMR / hybrid in M5)
+│   ├── qa.py            # grounded prompt, chat-model factory, citation → source mapping
+│   ├── pipeline.py      # wires the steps together; shared by CLI and future web UI
+│   ├── agent/           # LangGraph state, nodes, graph, prompts (M4)
+│   └── cli.py           # Typer commands: thin layer that reads settings and prints
 ├── tests/
 ├── data/                # user documents (git-ignored)
 ├── storage/             # vector store + registry (git-ignored)
@@ -134,6 +136,10 @@ archivist/
 
 Data flow: **load → split → embed → store** (ingestion) and
 **question → (rewrite) → retrieve → grade → generate with citations** (query).
+
+Design rules: model/provider details live only in the factory functions (`get_embeddings`,
+`get_chat_model`); core functions take their dependencies as arguments and never call
+`get_settings()` themselves — only the CLI (the program edge) reads settings.
 
 This layout is a proposal; refine it as milestones are implemented and update this section.
 
