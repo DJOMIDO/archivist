@@ -51,7 +51,7 @@ def get_chat_model(
 ) -> BaseChatModel:
     """Create the chat client for any OpenAI-compatible server.
 
-    `reasoning_effort="none"` turnss off "thinking" on models that support it, which
+    `reasoning_effort="none"` turns off "thinking" on models that support it, which
     cuts answer time from minutes to seconds. Use None for servers/models that
     reject the parameter.
     """

@@ -9,7 +9,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 |-----------|--------------------------------|--------|--------------------------------|
 | M0        | Project scaffolding            | ✅     | `chore/project-scaffolding`    |
 | M1        | Minimal RAG pipeline (MD/TXT)  | ✅     | `feat/minimal-rag-pipeline`    |
-| M1.5      | Local model runtime evaluation | 🟡     | `refactor/openai-compatible-llm-provider` |
+| M1.5      | Local model runtime evaluation | ✅     | `refactor/openai-compatible-llm-provider` |
 | M2        | Evaluation baseline            | ⬜     | `feat/eval-baseline`           |
 | M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
 | M4        | Agentic RAG with LangGraph     | ⬜     | `feat/langgraph-agent`         |
@@ -62,22 +62,23 @@ question); a stopped Ollama shows a raw traceback; sources print as absolute pat
 
 ---
 
-## M1.5 — Local model runtime evaluation 🟡
+## M1.5 — Local model runtime evaluation ✅
 
 **Goal:** stop depending on Ollama specifically (openness and lock-in concerns) by talking to any
 local OpenAI-compatible server.
 **Learning focus:** provider abstraction — only the two model factories should change.
 
-- [ ] Switch `get_embeddings` / `get_chat_model` to `langchain-openai` with a configurable base URL
+- [x] Switch `get_embeddings` / `get_chat_model` to `langchain-openai` with a configurable base URL
+  (only the two factories, config and CLI wiring changed; all 31 existing tests passed unchanged)
 - [x] Evaluate candidates: LM Studio (GUI closed source), `mlx-lm` server (MIT), llama.cpp
   `llama-server` (MIT) — chose LM Studio's engine (served by Bionic / `lms`); others not needed
 - [x] Go/no-go criteria: thinking can be disabled (`reasoning_effort="none"` → 0 reasoning
   tokens), embedding model loads on demand (JIT, 60 min idle TTL), API runs as a background
   service (`--run-as-service`) without a window. Generation is ~8–11 s with the 8-bit model
   (Ollama's 4-bit build was ~2–8 s); try the 4-bit MLX build in M2's model comparison
-- [ ] Rebuild the index (different runtime/quantization ⇒ different vectors)
-- [ ] Friendly CLI error when the model server is unreachable (instead of a traceback)
-- [ ] Update AGENTS.md tech stack, README, `.env.example`
+- [x] Rebuild the index (different runtime/quantization ⇒ different vectors)
+- [x] Friendly CLI error when the model server is unreachable (instead of a traceback)
+- [x] Update AGENTS.md tech stack, README, `.env.example`
 
 **Done when:** the full test suite passes and `ingest` / `ask` work against the chosen runtime.
 
@@ -90,8 +91,12 @@ local OpenAI-compatible server.
 
 - [ ] Enable LangSmith tracing via env vars
 - [ ] Small golden dataset (10–20 Q&A pairs over a sample corpus)
+  - include "tempting" questions the notes can't answer (e.g. "Docker vs VM") and a
+    non-zh/en question (French answers once cited passages while saying "not found")
 - [ ] Retrieval check (is the expected source retrieved?) and answer check (LLM-as-judge or reference match)
 - [ ] Record baseline scores in this file
+- [ ] Measure latency (retrieve / generate) alongside quality
+- [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
 **Done when:** one command runs the eval and baseline numbers are recorded.
 
