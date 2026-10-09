@@ -191,6 +191,12 @@ local OpenAI-compatible server.
 
 ## Changelog
 
+- **2026-10-09** — Desktop apps (LM Studio, Bionic) removed; models now served by the headless
+  `llmster` daemon (`lms daemon up` + `lms server start`). Pitfall found: after the apps were
+  removed the hub model definition was gone, so the chat model appeared as `qwen3.5-9b-mlx`
+  with no reasoning config — `reasoning_effort` was silently ignored (1,190 thinking tokens,
+  ~211 s per answer). `lms get qwen/qwen3.5-9b --mlx` restored it (171 KB, no re-download).
+
 - **2026-10-09** — Model runtime switched from Ollama to LM Studio's engine (Bionic and
   LM Studio share `~/.lmstudio`; `lms server start` launches whichever app ran last). Models:
   `qwen/qwen3.5-9b` (MLX 8-bit) and `text-embedding-qwen3-embedding-0.6b` (GGUF Q8).

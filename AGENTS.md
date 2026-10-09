@@ -80,7 +80,7 @@ These rules override any default "just write the code" behavior.
 ## 4. Non-functional requirements
 
 - **Local-first & free:** LLM and embeddings run locally behind an OpenAI-compatible server
-  (currently LM Studio's engine, via Bionic / `lms`; no paid API required);
+  (currently LM Studio's headless engine `llmster`, managed with `lms`; no paid API required);
   vector store and document registry persisted on disk.
 - **Secrets:** API keys (e.g. LangSmith) come from environment / `.env`; `.env` is never committed
   (provide `.env.example`).
@@ -100,7 +100,7 @@ These rules override any default "just write the code" behavior.
 | Language           | Python **3.12 or 3.13** (pinned via `uv`; 3.14 may lack wheels for some deps) |
 | Env / packaging    | `uv` + `pyproject.toml`                                                 |
 | Framework          | LangChain, LangGraph                                                    |
-| LLM & embeddings   | Any OpenAI-compatible server via `langchain-openai` (base URL in config); currently LM Studio's engine on `localhost:1234` |
+| LLM & embeddings   | Any OpenAI-compatible server via `langchain-openai` (base URL in config); currently LM Studio's headless `llmster` on `localhost:1234` |
 | Default models     | Chat: `qwen/qwen3.5-9b` (MLX 8-bit, tool calling; thinking off via `reasoning_effort="none"`). Embeddings: `text-embedding-qwen3-embedding-0.6b` (GGUF Q8, 1024-dim, instruction-aware queries). **Changing the embedding model requires rebuilding the index.** |
 | Vector store       | Chroma (local persistent) via `langchain-chroma`                        |
 | Loaders            | pypdf / PyMuPDF (PDF), docx2txt or Unstructured (DOCX), BeautifulSoup (HTML), EPUB loader; plain readers for MD/TXT |

@@ -13,9 +13,20 @@ as a learning project.
 
 - [uv](https://docs.astral.sh/uv/)
 - Python 3.13 (installed automatically by uv)
-- A local OpenAI-compatible model server with a chat model and an embedding model, e.g.
-  [LM Studio](https://lmstudio.ai/) (`lms server start` → `http://localhost:1234/v1`).
-  The server must be running whenever you use `ingest` or `ask`.
+- A local OpenAI-compatible model server. The default setup uses LM Studio's headless engine
+  [llmster](https://lmstudio.ai/docs/developer/core/headless) (no desktop app needed):
+
+  ```bash
+  curl -fsSL https://lmstudio.ai/install.sh | bash   # installs llmster + the `lms` CLI
+  lms get qwen/qwen3.5-9b --mlx                      # chat model (pick the 8-bit MLX build)
+  lms get qwen3-embedding-0.6b                       # embedding model (search; pick GGUF Q8)
+  lms daemon up && lms server start                  # serve http://localhost:1234/v1
+  ```
+
+  Download models with `lms get <hub-name>`, not by copying files: the hub definition is what
+  lets `reasoning_effort="none"` turn off "thinking". Without it the chat model is listed under
+  its folder name and every answer takes minutes. The server must be running whenever you use
+  `ingest` or `ask`; models load on first use and unload after an hour idle.
 
 ## Getting started
 
