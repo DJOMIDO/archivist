@@ -1,7 +1,9 @@
+import httpx
 import pytest
 from langchain_chroma import Chroma
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from langchain_core.language_models import FakeListChatModel
+from openai import APIConnectionError
 from typer.testing import CliRunner
 
 from archivist.cli import app
@@ -24,7 +26,7 @@ def test_config_command_reflects_env_override(monkeypatch):
 
 @pytest.fixture
 def fake_backends(tmp_path, monkeypatch):
-    """Replace Ollama-backed factories in the CLI with offline fakes."""
+    """Replace model-server-backed factories in the CLI with offline fakes."""
     store = Chroma(
         embedding_function=DeterministicFakeEmbedding(size=16),
         persist_directory=str(tmp_path / "chroma"),
@@ -52,3 +54,16 @@ def test_ingest_missing_path_fails(tmp_path, fake_backends):
     result = runner.invoke(app, ["ingest", str(tmp_path / "nope")])
 
     assert result.exit_code != 0
+
+
+def test_unreachable_model_server_gives_short_error(monkeypatch, fake_backends):
+    def refuse(*args, **kwargs):
+        raise APIConnectionError(request=httpx.Request("POST", "http://localhost"))
+
+    monkeypatch.setattr("archivist.cli.pipeline.ask", refuse)
+
+    result = runner.invoke(app, ["ask", "anything"])
+
+    assert result.exit_code == 1
+    assert "cannot reach the model server" in result.output
+    assert "Traceback" not in result.output

@@ -8,7 +8,8 @@ from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
+from pydantic import SecretStr
 
 NOT_FOUND = {
     "zh": "你的文档里没有找到相关内容。",
@@ -41,10 +42,25 @@ class Answer:
     sources: list[str]
 
 
-def get_chat_model(model: str, base_url: str, temperature: float) -> BaseChatModel:
-    """Create the chat model client (Ollama), with thinking turned off for speed."""
-    return ChatOllama(
-        model=model, base_url=base_url, temperature=temperature, reasoning=False
+def get_chat_model(
+    model: str,
+    base_url: str,
+    api_key: SecretStr,
+    temperature: float,
+    reasoning_effort: str | None,
+) -> BaseChatModel:
+    """Create the chat client for any OpenAI-compatible server.
+
+    `reasoning_effort="none"` turnss off "thinking" on models that support it, which
+    cuts answer time from minutes to seconds. Use None for servers/models that
+    reject the parameter.
+    """
+    return ChatOpenAI(
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+        temperature=temperature,
+        reasoning_effort=reasoning_effort,
     )
 
 

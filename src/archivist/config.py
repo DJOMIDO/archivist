@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,13 +16,15 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # --- Ollama ---
-    ollama_base_url: str = "http://localhost:11434"
+    # --- Model server (any OpenAI-compatible API: LM Studio, mlx-lm, llama.cpp) ---
+    llm_base_url: str = "http://localhost:1234/v1"
+    llm_api_key: SecretStr = SecretStr("not-needed")
 
     # --- Models ---
-    chat_model: str = "qwen3.5:9b-mlx"
+    chat_model: str = "qwen/qwen3.5-9b"
     chat_temperature: float = Field(default=0.2, ge=0.0, le=2.0)
-    embedding_model: str = "qwen3-embedding:0.6b"
+    chat_reasoning_effort: str | None = "none"
+    embedding_model: str = "text-embedding-qwen3-embedding-0.6b"
 
     # --- Chunking (sizes are in characters, not tokens) ---
     chunk_size: int = Field(default=1000, gt=0)

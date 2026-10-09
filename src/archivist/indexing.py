@@ -5,14 +5,21 @@ from pathlib import Path
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from langchain_ollama import OllamaEmbeddings
+from langchain_openai import OpenAIEmbeddings
+from pydantic import SecretStr
 
 COLLECTION_NAME = "archivist"
 
 
-def get_embeddings(model: str, base_url: str) -> Embeddings:
-    """Create the embedding model client (Ollama)."""
-    return OllamaEmbeddings(model=model, base_url=base_url)
+def get_embeddings(model: str, base_url: str, api_key: SecretStr) -> Embeddings:
+    """Create the embedding client for any OpenAI-comptible aerver."""
+    return OpenAIEmbeddings(
+        model=model,
+        base_url=base_url,
+        api_key=api_key,
+        # Send raw text: local servers don't understand OpenAI's pre-tokenized input.
+        check_embedding_ctx_length=False,
+    )
 
 
 def get_vector_store(embeddings: Embeddings, persist_dir: Path) -> Chroma:

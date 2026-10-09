@@ -13,7 +13,9 @@ as a learning project.
 
 - [uv](https://docs.astral.sh/uv/)
 - Python 3.13 (installed automatically by uv)
-- [Ollama](https://ollama.com/) with a chat model and an embedding model pulled
+- A local OpenAI-compatible model server with a chat model and an embedding model, e.g.
+  [LM Studio](https://lmstudio.ai/) (`lms server start` → `http://localhost:1234/v1`).
+  The server must be running whenever you use `ingest` or `ask`.
 
 ## Getting started
 

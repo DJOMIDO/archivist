@@ -1,10 +1,12 @@
 from langchain_core.documents import Document
 from langchain_core.language_models import FakeListChatModel
+from pydantic import SecretStr
 
 from archivist.qa import (
     answer_question,
     cited_sources,
     format_context,
+    get_chat_model,
     not_found_message,
 )
 
@@ -69,3 +71,12 @@ def test_not_found_message_follows_question_language():
         not_found_message("What's the weather?")
         == "I couldn't find this in your documents."
     )
+
+
+def test_chat_model_factory_turns_thinking_off():
+    llm = get_chat_model(
+        "some-model", "http://localhost:1234/v1", SecretStr("x"), 0.2, "none"
+    )
+
+    assert llm.reasoning_effort == "none"
+    assert llm.temperature == 0.2

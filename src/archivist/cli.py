@@ -1,10 +1,13 @@
 """Command-line interface for Archivist."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
 
 import typer
 from langchain_chroma import Chroma
+from openai import APIConnectionError
 
 from archivist import pipeline
 from archivist.config import Settings, get_settings
@@ -19,8 +22,24 @@ app = typer.Typer(
 
 def open_vector_store(settings: Settings) -> Chroma:
     """Open the persistent vector store described by `settings`."""
-    embeddings = get_embeddings(settings.embedding_model, settings.ollama_base_url)
-    return get_vector_store(embeddings, settings.storage_dir / "chrome")
+    embeddings = get_embeddings(
+        settings.embedding_model, settings.llm_base_url, settings.llm_api_key
+    )
+    return get_vector_store(embeddings, settings.storage_dir / "chroma")
+
+
+@contextmanager
+def model_server_errors(settings: Settings) -> Iterator[None]:
+    """Turn "model server not running" into a one-line error instead of a traceback."""
+    try:
+        yield
+    except APIConnectionError:
+        typer.echo(
+            f"Error: cannot reach the model server at {settings.llm_base_url}. "
+            "Is the model server running? (e.g. `lms server start`)",
+            err=True,
+        )
+        raise typer.Exit(code=1) from None
 
 
 @app.callback()
@@ -44,12 +63,13 @@ def ingest(
 ) -> None:
     """Load, split, embed and store documents so they can be searched."""
     settings = get_settings()
-    result = pipeline.ingest(
-        path,
-        open_vector_store(settings),
-        chunk_size=settings.chunk_size,
-        chunk_overlap=settings.chunk_overlap,
-    )
+    with model_server_errors(settings):
+        result = pipeline.ingest(
+            path,
+            open_vector_store(settings),
+            chunk_size=settings.chunk_size,
+            chunk_overlap=settings.chunk_overlap,
+        )
     typer.echo(f"Ingested {result.documents} documents ({result.chunks} chunks).")
 
 
@@ -63,15 +83,20 @@ def ask(
     """Answer a question from your documents, with sources."""
     settings = get_settings()
     llm = get_chat_model(
-        settings.chat_model, settings.ollama_base_url, settings.chat_temperature
+        settings.chat_model,
+        settings.llm_base_url,
+        settings.llm_api_key,
+        settings.chat_temperature,
+        settings.chat_reasoning_effort,
     )
-    answer = pipeline.ask(
-        question,
-        open_vector_store(settings),
-        llm,
-        k=top_k or settings.retrieval_top_k,
-        max_distance=settings.retrieval_max_distance,
-    )
+    with model_server_errors(settings):
+        answer = pipeline.ask(
+            question,
+            open_vector_store(settings),
+            llm,
+            k=top_k or settings.retrieval_top_k,
+            max_distance=settings.retrieval_max_distance,
+        )
     typer.echo(answer.text)
     if answer.sources:
         typer.echo("\nSources:")

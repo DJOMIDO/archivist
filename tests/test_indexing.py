@@ -2,8 +2,9 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
+from pydantic import SecretStr
 
-from archivist.indexing import chunk_id, get_vector_store, index_chunks
+from archivist.indexing import chunk_id, get_embeddings, get_vector_store, index_chunks
 
 
 def make_chunk(text: str, start: int) -> Document:
@@ -40,3 +41,11 @@ def test_index_empty_list_is_noop(tmp_path: Path):
     store = get_vector_store(DeterministicFakeEmbedding(size=16), tmp_path)
 
     assert index_chunks(store, []) == 0
+
+
+def test_embeddings_factory_sends_raw_text():
+    embeddings = get_embeddings(
+        "some-model", "http://localhost:1234/v1", SecretStr("x")
+    )
+
+    assert embeddings.check_embedding_ctx_length is False
