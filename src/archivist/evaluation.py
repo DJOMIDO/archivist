@@ -2,6 +2,7 @@
 
 import json
 from dataclasses import dataclass
+from hashlib import sha256
 from pathlib import Path
 from time import perf_counter
 from typing import Annotated, Literal, Self
@@ -17,6 +18,7 @@ from pydantic import (
     model_validator,
 )
 
+from archivist.loaders import find_files
 from archivist.qa import answer_question
 from archivist.retrieval import retrieve
 
@@ -241,4 +243,31 @@ def summarize_reviews(cases: list[EvalCase], data: ReviewFile) -> ReviewSummary:
             for review in data.reviews
         ),
         pending=[case_id for case_id in case_ids if case_id not in reviewed_ids],
+    )
+
+
+@dataclass
+class EvalFingerprints:
+    """Content fingerprints for cases and supported corpus files."""
+
+    cases_sha256: str
+    corpus_sha256: str
+    files: dict[str, str]
+
+
+def fingerprint_eval_data(cases_path: Path, corpus_dir: Path) -> EvalFingerprints:
+    """Hash dataset bytes and corpus-relative filenames/content."""
+    files = {
+        path.relative_to(corpus_dir).as_posix(): sha256(path.read_bytes()).hexdigest()
+        for path in find_files(corpus_dir)
+    }
+    if not files:
+        raise ValueError("Evaluation corpus contains no supported files")
+
+    encoded = json.dumps(files, sort_keys=True).encode("utf-8")
+
+    return EvalFingerprints(
+        cases_sha256=sha256(cases_path.read_bytes()).hexdigest(),
+        corpus_sha256=sha256(encoded).hexdigest(),
+        files=files,
     )

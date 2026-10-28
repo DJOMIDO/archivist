@@ -116,7 +116,7 @@ local OpenAI-compatible server.
   - [x] Add strict review models and reusable `load_reviews` with ten offline
     tests for snapshots, field types, duplicate reviews, and run association
     (62 tests passing overall)
-  - [ ] Complete all twelve manual reviews and summarize answer-quality scores
+  - [x] Complete all twelve rubric-based reviews and summarize answer-quality scores
     - [x] Verify standalone summary distinguishes review coverage (2/12, 16.7%)
       from reviewed-subset pass rates and withholds the full-dataset pass rate
     - [x] Extract pure `summarize_reviews` and typed `ReviewSummary`; verify
@@ -129,10 +129,30 @@ local OpenAI-compatible server.
   - [x] Confirm `privacy-002`: complete French refusal without citations;
     the documents do not specify external diagnostic data retention
 - [ ] Record baseline scores in this file
+  - [x] Verify standalone SHA-256 fingerprints for raw case-file bytes and a
+    sorted mapping of corpus-relative paths to supported-file content hashes
+  - [x] Extract typed `EvalFingerprints` and reusable `fingerprint_eval_data`;
+    verify unchanged data, case formatting, document content, renaming, ignored
+    files, corpus relocation, and empty-corpus rejection (74 tests overall)
+  - [ ] Capture run settings and bind fingerprints to index construction
 - [x] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
 **Done when:** one command runs the eval and baseline numbers are recorded.
+
+**Preliminary batch observations (not the final reproducible baseline):**
+
+Run: `20261028T131020882835Z.jsonl`; full reviews:
+`20261028T131020882835Z.complete.reviews.json` under local `storage/eval-results/`.
+The original two-review example is retained separately. Review coverage is 12/12;
+correctness, completeness, citation behavior, and all-criteria pass counts are each
+12/12. Mean source recall over nine answerable cases is 100%; the three unanswerable
+cases are excluded from that metric. The assistant inspected the saved answers
+against rubric v1 and the corpus, including the ten newly recorded judgments;
+these scores are not independent human ratings or a separately calibrated judge.
+This single small-corpus run does not erase the earlier contradictory smoke answer.
+Run configuration/corpus version capture and a unified evaluation command remain
+pending before declaring the formal baseline.
 
 ---
 
@@ -224,6 +244,27 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Extracted typed evaluation data fingerprints and added seven
+  offline tests. Fingerprints detect case-byte, document-content, and relative
+  filename changes while ignoring unsupported/hidden files and absolute corpus
+  location. Empty supported corpora are rejected (74 tests passing; Ruff passed).
+  Run-settings capture and association with index construction remain pending.
+
+- **2026-10-28** — Verified the standalone data-fingerprint prototype against
+  the current twelve-case, six-document dataset. Case fingerprints cover raw
+  bytes; corpus fingerprints cover relative filenames and file hashes with
+  deterministic key ordering. Current fingerprints are not retroactive evidence
+  of the data or index used by the earlier run. Module extraction, tests, and
+  integration with run configuration/index provenance remain pending.
+
+- **2026-10-28** — Completed rubric-v1 reviews for all twelve saved batch answers.
+  Added ten assistant-reviewed decisions with source-based reasons and exact
+  answer/citation snapshots to a new full-review file, retaining the two-review
+  example. Existing validation and summary scripts confirm 12/12 coverage and
+  12/12 passes for each criterion and the all-criteria check. Recorded these as
+  preliminary assistant-reviewed observations rather than independent ratings
+  or the final reproducible baseline.
 
 - **2026-10-28** — Extracted pure `summarize_reviews` and typed review-summary
   counts; the standalone summary script retains result/dataset matching and
