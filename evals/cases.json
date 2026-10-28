@@ -4,7 +4,9 @@
     "question": "Cedar Notes 如何判断文档没有变化？",
     "answerable": true,
     "reference_answer": "通过文档内容的 SHA-256 哈希判断。",
-    "expected_sources": ["indexing.md"]
+    "expected_sources": [
+      "indexing.md"
+    ]
   },
   {
     "id": "indexing-002",
@@ -18,6 +20,43 @@
     "question": "Que fait Cedar Notes lorsqu'un document est modifié ?",
     "answerable": true,
     "reference_answer": "Il remplace les anciens fragments par ceux de la nouvelle version.",
-    "expected_sources": ["indexing.md"]
+    "expected_sources": [
+      "indexing.md"
+    ]
+  },
+  {
+    "id": "backups-001",
+    "question": "Cedar Notes 的备份包含向量索引吗？恢复后需要做什么？",
+    "answerable": true,
+    "reference_answer": "备份不包含向量索引，恢复后必须重建向量索引。",
+    "expected_sources": [
+      "backups.md"
+    ]
+  },
+  {
+    "id": "privacy-001",
+    "question": "Cedar Notes 启用诊断追踪后，检索到的文档片段会离开本机吗？",
+    "answerable": true,
+    "reference_answer": "会。包含在提示词中的检索片段会随提示词发送到外部诊断服务。",
+    "expected_sources": [
+      "privacy.md"
+    ]
+  },
+  {
+    "id": "cross-source-001",
+    "question": "Cedar Notes 删除文档时会移除哪些内容？备份会保留多少份？",
+    "answerable": true,
+    "reference_answer": "删除文档会移除它的注册记录和所有分块；备份保留最近七份成功备份。",
+    "expected_sources": [
+      "indexing.md",
+      "backups.md"
+    ]
+  },
+  {
+    "id": "backups-002",
+    "question": "Cedar Notes 使用哪种加密算法保护备份？",
+    "answerable": false,
+    "reference_answer": "文档没有说明备份使用的加密算法。",
+    "expected_sources": []
   }
 ]

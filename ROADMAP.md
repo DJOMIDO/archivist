@@ -92,10 +92,15 @@ local OpenAI-compatible server.
 - [x] Enable LangSmith tracing via env vars
 - [ ] Small golden dataset (10–20 Q&A pairs over a sample corpus)
   - [x] Seed corpus and 3 cases with validated loading and offline tests
+  - [x] Expand to 7 cases over indexing, backup, and privacy documents, including
+    a cross-source question and two unanswerable questions
   - [ ] Expand to 10–20 cases across multiple source documents
   - include "tempting" questions the notes can't answer (e.g. "Docker vs VM") and a
     non-zh/en question (French answers once cited passages while saying "not found")
 - [ ] Retrieval check (is the expected source retrieved?) and answer check (LLM-as-judge or reference match)
+  - [x] Manual smoke check in isolated `storage/eval-smoke`: all four added cases
+    (backup recovery, privacy, cross-source answer, unsupported encryption)
+    behaved as expected, including citations and refusal behavior
 - [ ] Record baseline scores in this file
 - [ ] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
@@ -192,6 +197,19 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Manually smoke-tested RAG using an isolated evaluation index
+  (three documents, three chunks). The backup answer included both required facts
+  and cited `backups.md`; the unsupported encryption question received a refusal
+  without citations. The privacy answer correctly described external transmission
+  and cited `privacy.md`; the cross-source answer covered both facts and cited
+  `indexing.md` and `backups.md`. All four added cases passed manual inspection.
+  These observations are not a scored evaluation baseline.
+
+- **2026-10-28** — Expanded the evaluation seed to seven validated cases across
+  three documents. Added backup and privacy topics, a two-source question, and
+  an unanswerable backup-encryption question. Further corpus expansion is needed
+  to measure source selection with the default top-k of four.
 
 - **2026-10-28** — Added a seed evaluation corpus and three reference cases.
   Added typed dataset loading, source validation, and eight offline tests
