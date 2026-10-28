@@ -44,6 +44,8 @@ These rules override any default "just write the code" behavior.
 7. **Git is the user's job.** Do not create branches or commits. Instead *suggest* a branch name
    and a commit message (see §7) whenever a change warrants it.
 8. **Keep the docs alive** (see §8).
+   Agents update ROADMAP.md directly as work progresses; the owner does not need to
+   type roadmap updates as part of lessons.
 
 ---
 

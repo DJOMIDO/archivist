@@ -1,0 +1,23 @@
+[
+  {
+    "id": "indexing-001",
+    "question": "Cedar Notes 如何判断文档没有变化？",
+    "answerable": true,
+    "reference_answer": "通过文档内容的 SHA-256 哈希判断。",
+    "expected_sources": ["indexing.md"]
+  },
+  {
+    "id": "indexing-002",
+    "question": "Cedar Notes 使用哪个 embedding 模型？",
+    "answerable": false,
+    "reference_answer": "文档没有说明使用哪个 embedding 模型。",
+    "expected_sources": []
+  },
+  {
+    "id": "indexing-003",
+    "question": "Que fait Cedar Notes lorsqu'un document est modifié ?",
+    "answerable": true,
+    "reference_answer": "Il remplace les anciens fragments par ceux de la nouvelle version.",
+    "expected_sources": ["indexing.md"]
+  }
+]

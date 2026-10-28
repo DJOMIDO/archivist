@@ -10,7 +10,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 | M0        | Project scaffolding            | ✅     | `chore/project-scaffolding`    |
 | M1        | Minimal RAG pipeline (MD/TXT)  | ✅     | `feat/minimal-rag-pipeline`    |
 | M1.5      | Local model runtime evaluation | ✅     | `refactor/openai-compatible-llm-provider` |
-| M2        | Evaluation baseline            | ⬜     | `feat/eval-baseline`           |
+| M2        | Evaluation baseline            | 🟡     | `feat/eval-baseline`           |
 | M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
 | M4        | Agentic RAG with LangGraph     | ⬜     | `feat/langgraph-agent`         |
 | M5        | Retrieval quality              | ⬜     | `feat/retrieval-improvements`  |
@@ -84,13 +84,15 @@ local OpenAI-compatible server.
 
 ---
 
-## M2 — Evaluation baseline ⬜
+## M2 — Evaluation baseline 🟡
 
 **Goal:** measure quality before optimizing, so later changes are comparable.
 **Learning focus:** LangSmith tracing, datasets, evaluators.
 
 - [x] Enable LangSmith tracing via env vars
 - [ ] Small golden dataset (10–20 Q&A pairs over a sample corpus)
+  - [x] Seed corpus and 3 cases with validated loading and offline tests
+  - [ ] Expand to 10–20 cases across multiple source documents
   - include "tempting" questions the notes can't answer (e.g. "Docker vs VM") and a
     non-zh/en question (French answers once cited passages while saying "not found")
 - [ ] Retrieval check (is the expected source retrieved?) and answer check (LLM-as-judge or reference match)
@@ -190,6 +192,10 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Added a seed evaluation corpus and three reference cases.
+  Added typed dataset loading, source validation, and eight offline tests
+  (42 tests passing overall). The dataset still needs expansion before baseline evaluation.
 
 - **2026-10-28** — Enabled LangSmith tracing for the CLI using agent-based
   workspace configuration. Required `langsmith>=0.14.9` and
