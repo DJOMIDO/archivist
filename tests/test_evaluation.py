@@ -1,10 +1,15 @@
 import json
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.documents import Document
+from langchain_core.language_models import FakeListChatModel
+from langchain_core.vectorstores import VectorStore
 from pydantic import ValidationError
 
-from archivist.evaluation import load_eval_cases
+from archivist.evaluation import EvalCase, load_eval_cases, run_eval_case
 
 
 @pytest.fixture
@@ -90,3 +95,68 @@ def test_reject_empty_dataset(dataset_paths):
 
     with pytest.raises(ValidationError):
         load_eval_cases(path, corpus)
+
+
+class PromptRecorder(BaseCallbackHandler):
+    """Capture prompts without contacting a real model."""
+
+    def __init__(self):
+        self.prompts = []
+
+    def on_llm_start(self, serialized, prompts, **kwargs):
+        self.prompts.extend(prompts)
+
+
+def test_run_case_records_results_without_leaking_reference(
+    tmp_path: Path, sample_case, monkeypatch
+):
+    case = EvalCase.model_validate(
+        {**sample_case, "reference_answer": "REFERENCE_ONLY_SENTINEL"}
+    )
+    doc = Document(
+        page_content="Sample content",
+        metadata={"source": str(tmp_path / "note.md")},
+    )
+    store = Mock(spec=VectorStore)
+    store.similarity_search_with_score.return_value = [(doc, 0.25)]
+
+    recorder = PromptRecorder()
+    llm = FakeListChatModel(
+        responses=["Sample content [1]."],
+        callbacks=[recorder],
+    )
+
+    ticks = iter([10.0, 12.0, 15.0])
+    monkeypatch.setattr("archivist.evaluation.perf_counter", lambda: next(ticks))
+
+    result = run_eval_case(case, store, llm, tmp_path, k=2)
+
+    store.similarity_search_with_score.assert_called_once_with(case.question, k=2)
+    assert result.id == case.id
+    assert result.question == case.question
+    assert result.answer == "Sample content [1]."
+    assert len(result.retrieved) == 1
+    assert result.retrieved[0].source == "note.md"
+    assert result.retrieved[0].distance == 0.25
+    assert result.cited_sources == ["note.md"]
+    assert result.retrieve_seconds == 2.0
+    assert result.generate_seconds == 3.0
+
+    assert len(recorder.prompts) == 1
+    prompt = recorder.prompts[0]
+    assert case.question in prompt
+    assert doc.page_content in prompt
+    assert case.reference_answer not in prompt
+
+
+def test_run_case_with_no_hits_skips_model(tmp_path: Path, sample_case):
+    case = EvalCase.model_validate(sample_case)
+    store = Mock(spec=VectorStore)
+    store.similarity_search_with_score.return_value = []
+    llm = FakeListChatModel(responses=[])
+
+    result = run_eval_case(case, store, llm, tmp_path, k=2)
+
+    assert result.retrieved == []
+    assert result.cited_sources == []
+    assert result.answer == "I couldn't find this in your documents."

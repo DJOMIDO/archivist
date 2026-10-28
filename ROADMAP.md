@@ -98,6 +98,11 @@ local OpenAI-compatible server.
   - [x] Include three unanswerable questions, French answer and refusal cases,
     and two questions requiring multiple sources
 - [ ] Retrieval check (is the expected source retrieved?) and answer check (LLM-as-judge or reference match)
+  - [x] Standalone batch prototype saves all 12 cases as JSONL with retrieved
+    sources/distances, answers, citations, and separate retrieval/generation timings
+  - [x] Extract dependency-injected `run_eval_case` with typed result records;
+    verify single retrieval, reference isolation, citations, timing boundaries,
+    and empty-context behavior offline (44 tests passing overall)
   - [x] Manual smoke check in isolated `storage/eval-smoke`: all four added cases
     (backup recovery, privacy, cross-source answer, unsupported encryption)
     behaved as expected, including citations and refusal behavior
@@ -106,7 +111,7 @@ local OpenAI-compatible server.
   - [x] Confirm `privacy-002`: complete French refusal without citations;
     the documents do not specify external diagnostic data retention
 - [ ] Record baseline scores in this file
-- [ ] Measure latency (retrieve / generate) alongside quality
+- [x] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
 **Done when:** one command runs the eval and baseline numbers are recorded.
@@ -201,6 +206,25 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Extracted `run_eval_case` into `evaluation.py`, receiving its
+  vector store, chat model, corpus path, and retrieval parameters explicitly.
+  The batch script retains configuration and incremental JSONL output. Added
+  two offline tests for result recording, a single retrieval call, reference
+  isolation from prompts, deterministic timing boundaries, and skipping the
+  model when retrieval is empty (44 tests passing; Ruff passed). The first batch
+  recorded mean retrieval/generation times of 1.447/13.703 seconds; these include
+  request overhead and any model loading, without a controlled warm-up protocol.
+  Automated scoring and run configuration capture remain pending.
+
+- **2026-10-28** — Completed the first twelve-case batch run with the standalone
+  prototype (`20261028T131020882835Z.jsonl`, under ignored `storage/eval-results`).
+  All nine answerable cases retrieved every expected source at top-k four
+  (mean source recall 100%); all three unanswerable cases refused without citations
+  on manual inspection. `cross-source-002` no longer contradicted itself, but
+  only explicitly stated and cited the backup side of the comparison. These are
+  preliminary observations; automated scoring, run configuration capture, and
+  reusable runner tests remain pending before declaring a formal baseline.
 
 - **2026-10-28** — Smoke-tested the expanded six-document index with top-k four.
   `cross-source-002` cited both expected sources but incorrectly opened by saying
