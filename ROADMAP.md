@@ -107,6 +107,16 @@ local OpenAI-compatible server.
     question alignment, and excludes unanswerable cases from the mean
   - [x] Extract and test reusable source-recall calculation: full/partial/zero
     recall, duplicate sources, and N/A for empty expectations (52 tests overall)
+  - [x] Define manual answer-review criteria: correctness, completeness, and
+    citation support; calibrate on `cross-source-002` and `privacy-002`
+  - [x] Persist two manual reviews for the first batch and verify their answer
+    and citation snapshots against the original result rows
+  - [x] Verify standalone review validation rejects an altered answer snapshot
+    and passes again after restoring the original text
+  - [x] Add strict review models and reusable `load_reviews` with ten offline
+    tests for snapshots, field types, duplicate reviews, and run association
+    (62 tests passing overall)
+  - [ ] Complete all twelve manual reviews and summarize answer-quality scores
   - [x] Manual smoke check in isolated `storage/eval-smoke`: all four added cases
     (backup recovery, privacy, cross-source answer, unsupported encryption)
     behaved as expected, including citations and refusal behavior
@@ -210,6 +220,26 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Added strict `AnswerReview`/`ReviewFile` models and reusable
+  `load_reviews`; the validation script now delegates to the module. Added ten
+  offline tests covering preserved snapshot whitespace, invalid judgment fields,
+  unknown IDs, changed answers/citations, duplicate reviews, and wrong run files
+  (62 tests passing; Ruff passed). Two of twelve answers have structured manual
+  reviews; full review coverage and answer-score aggregation remain pending.
+
+- **2026-10-28** — Saved two structured manual reviews for batch
+  `20261028T131020882835Z`, with rubric version, answer/citation snapshots, three
+  boolean judgments, and reasons. Verified both snapshots against the twelve-row
+  result file; review coverage is 2/12, not a full-dataset answer score. Reusable
+  validation and tests remain pending.
+
+- **2026-10-28** — Defined separate manual answer criteria for correctness,
+  completeness, and citation support. Concise answers need not repeat the
+  reference verbatim or cite every expected retrieval source. Under this rubric,
+  the saved batch's concise `cross-source-002` answer and French `privacy-002`
+  refusal both pass all three checks. This does not change the earlier smoke
+  answer's contradiction failure. Structured review persistence remains pending.
 
 - **2026-10-28** — Extracted the pure `source_recall` metric and added eight
   parameterized offline tests. Source sets prevent duplicate passages from

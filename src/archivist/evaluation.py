@@ -1,9 +1,10 @@
 """Load evaluation datasets and run individual cases."""
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
@@ -140,3 +141,63 @@ def source_recall(
 
     retrieved = set(retrieved_sources)
     return len(expected & retrieved) / len(expected)
+
+
+class AnswerReview(BaseModel):
+    """Manual judgments for one saved answer."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: NonEmptyText
+    answer_snapshot: str
+    cited_sources_snapshot: list[str]
+    correctness: bool
+    completeness: bool
+    citations: bool
+    reason: NonEmptyText
+
+
+class ReviewFile(BaseModel):
+    """Manual reviews associated with one evaluation run."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    run_file: NonEmptyText
+    rubric_version: Literal["1"]
+    reviews: list[AnswerReview] = Field(min_length=1)
+
+
+def load_reviews(review_path: Path, results_path: Path) -> ReviewFile:
+    """Load reviews and verify their association with saved answers."""
+    data = ReviewFile.model_validate_json(review_path.read_text(encoding="utf-8"))
+
+    if data.run_file != results_path.name:
+        raise ValueError("Review run_file does not match results file")
+
+    rows = [
+        json.loads(line)
+        for line in results_path.read_text(encoding="utf-8").splitlines()
+    ]
+
+    by_id = {}
+    for row in rows:
+        if row["id"] in by_id:
+            raise ValueError(f"Duplicate result ID: {row['id']}")
+        by_id[row["id"]] = row
+
+    seen: set[str] = set()
+    for review in data.reviews:
+        if review.id in seen:
+            raise ValueError(f"Duplicate review ID: {review.id}")
+        seen.add(review.id)
+
+        if review.id not in by_id:
+            raise ValueError(f"Unknown review ID: {review.id}")
+        row = by_id[review.id]
+
+        if review.answer_snapshot != row["answer"]:
+            raise ValueError(f"Answer snapshot mismatch: {review.id}")
+        if review.cited_sources_snapshot != row["cited_sources"]:
+            raise ValueError(f"Citation snapshot mismatch: {review.id}")
+
+    return data
