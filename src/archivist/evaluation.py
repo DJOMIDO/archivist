@@ -127,3 +127,16 @@ def run_eval_case(
         retrieve_seconds=retrieved - started,
         generate_seconds=finished - retrieved,
     )
+
+
+def source_recall(
+    expected_sources: list[str],
+    retrieved_sources: list[str],
+) -> float | None:
+    """Return source recall, or None when no sources are expected."""
+    expected = set(expected_sources)
+    if not expected:
+        return None
+
+    retrieved = set(retrieved_sources)
+    return len(expected & retrieved) / len(expected)

@@ -103,6 +103,10 @@ local OpenAI-compatible server.
   - [x] Extract dependency-injected `run_eval_case` with typed result records;
     verify single retrieval, reference isolation, citations, timing boundaries,
     and empty-context behavior offline (44 tests passing overall)
+  - [x] Standalone source-recall scoring reads saved JSONL, checks result IDs and
+    question alignment, and excludes unanswerable cases from the mean
+  - [x] Extract and test reusable source-recall calculation: full/partial/zero
+    recall, duplicate sources, and N/A for empty expectations (52 tests overall)
   - [x] Manual smoke check in isolated `storage/eval-smoke`: all four added cases
     (backup recovery, privacy, cross-source answer, unsupported encryption)
     behaved as expected, including citations and refusal behavior
@@ -206,6 +210,19 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Extracted the pure `source_recall` metric and added eight
+  parameterized offline tests. Source sets prevent duplicate passages from
+  inflating recall; empty expectations return None and are excluded from the
+  mean. The scorer still reports 100% mean source recall for the nine answerable
+  cases in the saved batch (52 tests passing; Ruff passed). Automated answer
+  quality checks and run configuration capture remain pending.
+
+- **2026-10-28** — Verified the standalone source-recall scorer on the first
+  saved batch: nine answerable cases scored 100% mean source recall; three
+  unanswerable cases were reported as N/A and excluded. Result matching rejects
+  duplicate IDs, missing/extra IDs, and changed question text. Reusable metric
+  extraction and tests remain pending; this metric does not assess answer quality.
 
 - **2026-10-28** — Extracted `run_eval_case` into `evaluation.py`, receiving its
   vector store, chat model, corpus path, and retrieval parameters explicitly.

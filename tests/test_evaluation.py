@@ -9,7 +9,12 @@ from langchain_core.language_models import FakeListChatModel
 from langchain_core.vectorstores import VectorStore
 from pydantic import ValidationError
 
-from archivist.evaluation import EvalCase, load_eval_cases, run_eval_case
+from archivist.evaluation import (
+    EvalCase,
+    load_eval_cases,
+    run_eval_case,
+    source_recall,
+)
 
 
 @pytest.fixture
@@ -160,3 +165,30 @@ def test_run_case_with_no_hits_skips_model(tmp_path: Path, sample_case):
     assert result.retrieved == []
     assert result.cited_sources == []
     assert result.answer == "I couldn't find this in your documents."
+
+
+@pytest.mark.parametrize(
+    "expected,retrieved,score",
+    [
+        (["a.md"], ["a.md"], 1.0),
+        (["a.md"], ["b.md"], 0.0),
+        (["a.md"], [], 0.0),
+        (["a.md", "b.md"], ["a.md"], 0.5),
+        (["a.md", "b.md"], ["a.md", "a.md", "c.md"], 0.5),
+        (["a.md", "a.md"], ["a.md"], 1.0),
+        ([], ["a.md"], None),
+        ([], [], None),
+    ],
+    ids=[
+        "full-match",
+        "wrong-source",
+        "no-hits",
+        "partial-match",
+        "duplicate-hits",
+        "duplicate-expectations",
+        "unanswerable-with-hits",
+        "unanswerable-without-hits",
+    ],
+)
+def test_source_recall(expected, retrieved, score):
+    assert source_recall(expected, retrieved) == score
