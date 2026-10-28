@@ -58,5 +58,49 @@
     "answerable": false,
     "reference_answer": "文档没有说明备份使用的加密算法。",
     "expected_sources": []
+  },
+  {
+    "id": "imports-001",
+    "question": "Cedar Notes 导入目录时，会处理子目录和隐藏文件吗？",
+    "answerable": true,
+    "reference_answer": "会处理子目录中的文件，但跳过隐藏文件和隐藏目录。",
+    "expected_sources": [
+      "imports.md"
+    ]
+  },
+  {
+    "id": "search-001",
+    "question": "清除 Cedar Notes 的搜索历史，会删除文档或改变向量索引吗？",
+    "answerable": true,
+    "reference_answer": "不会。清除搜索历史只移除保存的查询，不删除文档，也不改变向量索引。",
+    "expected_sources": [
+      "search.md"
+    ]
+  },
+  {
+    "id": "exports-001",
+    "question": "Cedar Notes 导出的对话包含原始文档文件吗？能代替文档备份吗？",
+    "answerable": true,
+    "reference_answer": "不包含原始文档文件；导出对话不会创建文档备份，不能代替文档备份。",
+    "expected_sources": [
+      "exports.md"
+    ]
+  },
+  {
+    "id": "cross-source-002",
+    "question": "Cedar Notes 的对话导出和备份，哪一种包含原始文档文件？",
+    "answerable": true,
+    "reference_answer": "备份包含原始文档文件，对话导出不包含。",
+    "expected_sources": [
+      "exports.md",
+      "backups.md"
+    ]
+  },
+  {
+    "id": "privacy-002",
+    "question": "Pendant combien de jours le service de diagnostic externe de Cedar Notes conserve-t-il les données ?",
+    "answerable": false,
+    "reference_answer": "Les documents ne précisent pas la durée de conservation des données par le service de diagnostic externe.",
+    "expected_sources": []
   }
 ]

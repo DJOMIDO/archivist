@@ -90,17 +90,21 @@ local OpenAI-compatible server.
 **Learning focus:** LangSmith tracing, datasets, evaluators.
 
 - [x] Enable LangSmith tracing via env vars
-- [ ] Small golden dataset (10–20 Q&A pairs over a sample corpus)
+- [x] Small golden dataset (12 Q&A pairs over a six-document sample corpus)
   - [x] Seed corpus and 3 cases with validated loading and offline tests
   - [x] Expand to 7 cases over indexing, backup, and privacy documents, including
     a cross-source question and two unanswerable questions
-  - [ ] Expand to 10–20 cases across multiple source documents
-  - include "tempting" questions the notes can't answer (e.g. "Docker vs VM") and a
-    non-zh/en question (French answers once cited passages while saying "not found")
+  - [x] Expand to 12 validated cases across six source documents
+  - [x] Include three unanswerable questions, French answer and refusal cases,
+    and two questions requiring multiple sources
 - [ ] Retrieval check (is the expected source retrieved?) and answer check (LLM-as-judge or reference match)
   - [x] Manual smoke check in isolated `storage/eval-smoke`: all four added cases
     (backup recovery, privacy, cross-source answer, unsupported encryption)
     behaved as expected, including citations and refusal behavior
+  - [x] Re-ingest six documents (six chunks) and smoke-test `cross-source-002`:
+    both expected sources were cited, but the answer contradicted itself
+  - [x] Confirm `privacy-002`: complete French refusal without citations;
+    the documents do not specify external diagnostic data retention
 - [ ] Record baseline scores in this file
 - [ ] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
@@ -197,6 +201,21 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Smoke-tested the expanded six-document index with top-k four.
+  `cross-source-002` cited both expected sources but incorrectly opened by saying
+  conversation exports contain original files, contradicting its later correct
+  explanation and conclusion. Treat this answer as a manual quality failure.
+  The complete `privacy-002` output correctly stated in French that the context
+  does not specify external diagnostic data retention, without citations; it
+  passed manual inspection. Preserve these
+  observations for baseline evaluation before changing prompts or model settings.
+
+- **2026-10-28** — Completed the initial golden dataset: twelve validated cases
+  over six documents, adding import, search, and export topics. Includes nine
+  answerable cases, three unanswerable cases, two cross-source questions, and
+  French answer/refusal coverage. The five newest cases have not been run through
+  RAG yet; automated scoring and baseline measurements remain pending.
 
 - **2026-10-28** — Manually smoke-tested RAG using an isolated evaluation index
   (three documents, three chunks). The backup answer included both required facts
