@@ -117,6 +117,10 @@ local OpenAI-compatible server.
     tests for snapshots, field types, duplicate reviews, and run association
     (62 tests passing overall)
   - [ ] Complete all twelve manual reviews and summarize answer-quality scores
+    - [x] Verify standalone summary distinguishes review coverage (2/12, 16.7%)
+      from reviewed-subset pass rates and withholds the full-dataset pass rate
+    - [x] Extract pure `summarize_reviews` and typed `ReviewSummary`; verify
+      partial/full coverage and each failed criterion (67 tests overall)
   - [x] Manual smoke check in isolated `storage/eval-smoke`: all four added cases
     (backup recovery, privacy, cross-source answer, unsupported encryption)
     behaved as expected, including citations and refusal behavior
@@ -220,6 +224,18 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Extracted pure `summarize_reviews` and typed review-summary
+  counts; the standalone summary script retains result/dataset matching and
+  display. Five new offline test cases verify partial/full coverage and that
+  each individual failed criterion prevents an all-criteria pass (67 tests
+  passing; Ruff passed). Structured manual review coverage remains 2/12; no
+  full-dataset answer-quality score has been declared.
+
+- **2026-10-28** — Verified the standalone manual-review summary: coverage is
+  2/12 (16.7%); each criterion and the all-criteria check pass for both reviewed
+  answers. Full-dataset answer pass rate remains N/A, with ten pending IDs listed.
+  Reusable summary extraction and tests remain pending.
 
 - **2026-10-28** — Added strict `AnswerReview`/`ReviewFile` models and reusable
   `load_reviews`; the validation script now delegates to the module. Added ten

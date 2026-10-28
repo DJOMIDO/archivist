@@ -201,3 +201,44 @@ def load_reviews(review_path: Path, results_path: Path) -> ReviewFile:
             raise ValueError(f"Citation snapshot mismatch: {review.id}")
 
     return data
+
+
+@dataclass
+class ReviewSummary:
+    """Counts for reviewed answers and remaining cases."""
+
+    total: int
+    reviewed: int
+    passed: dict[str, int]
+    all_passed: int
+    pending: list[str]
+
+
+def summarize_reviews(cases: list[EvalCase], data: ReviewFile) -> ReviewSummary:
+    """Summarize judgments without reading files or printing."""
+    case_ids = [case.id for case in cases]
+    if not case_ids:
+        raise ValueError("Expected a non-empty dataset")
+    if len(set(case_ids)) != len(case_ids):
+        raise ValueError("Duplicate dataset IDs")
+
+    review_ids = [review.id for review in data.reviews]
+    reviewed_ids = set(review_ids)
+    if len(reviewed_ids) != len(review_ids):
+        raise ValueError("Duplicate review IDs")
+    if not reviewed_ids.issubset(case_ids):
+        raise ValueError("Reviews contain unknown dataset IDs")
+
+    return ReviewSummary(
+        total=len(cases),
+        reviewed=len(data.reviews),
+        passed={
+            field: sum(getattr(review, field) for review in data.reviews)
+            for field in ("correctness", "completeness", "citations")
+        },
+        all_passed=sum(
+            review.correctness and review.completeness and review.citations
+            for review in data.reviews
+        ),
+        pending=[case_id for case_id in case_ids if case_id not in reviewed_ids],
+    )

@@ -4,7 +4,13 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from archivist.evaluation import load_reviews
+from archivist.evaluation import (
+    AnswerReview,
+    EvalCase,
+    ReviewFile,
+    load_reviews,
+    summarize_reviews,
+)
 
 
 def write_json(path: Path, data: dict) -> None:
@@ -111,3 +117,84 @@ def test_reject_wrong_run_file(review_files):
 
     with pytest.raises(ValueError, match="run_file does not match"):
         load_reviews(review_path, results_path)
+
+
+@pytest.fixture
+def summary_inputs():
+    cases = [
+        EvalCase(
+            id=f"case-{number:03d}",
+            question="What is documented?",
+            answerable=True,
+            reference_answer="Sample content",
+            expected_sources=["note.md"],
+        )
+        for number in (1, 2)
+    ]
+    review = AnswerReview(
+        id="case-001",
+        answer_snapshot="Sample content [1].",
+        cited_sources_snapshot=["note.md"],
+        correctness=True,
+        completeness=True,
+        citations=True,
+        reason="Supported by note.md.",
+    )
+    data = ReviewFile(
+        run_file="run.jsonl",
+        rubric_version="1",
+        reviews=[review],
+    )
+    return cases, data
+
+
+def test_summary_reports_partial_coverage(summary_inputs):
+    cases, data = summary_inputs
+
+    summary = summarize_reviews(cases, data)
+
+    assert summary.total == 2
+    assert summary.reviewed == 1
+    assert summary.pending == ["case-002"]
+    assert summary.passed == {
+        "correctness": 1,
+        "completeness": 1,
+        "citations": 1,
+    }
+    assert summary.all_passed == 1
+
+
+@pytest.mark.parametrize("field", ["correctness", "completeness", "citations"])
+def test_failed_criterion_prevents_overall_pass(summary_inputs, field):
+    cases, data = summary_inputs
+    changed = data.model_dump()
+    changed["reviews"][0][field] = False
+    data = ReviewFile.model_validate(changed)
+
+    summary = summarize_reviews(cases, data)
+
+    expected = {"correctness": 1, "completeness": 1, "citations": 1}
+    expected[field] = 0
+    assert summary.passed == expected
+    assert summary.all_passed == 0
+    assert summary.reviewed == 1
+    assert summary.pending == ["case-002"]
+
+
+def test_summary_reports_complete_coverage(summary_inputs):
+    cases, data = summary_inputs
+    changed = data.model_dump()
+    changed["reviews"].append({**changed["reviews"][0], "id": "case-002"})
+    data = ReviewFile.model_validate(changed)
+
+    summary = summarize_reviews(cases, data)
+
+    assert summary.total == 2
+    assert summary.reviewed == 2
+    assert summary.pending == []
+    assert summary.all_passed == 2
+    assert summary.passed == {
+        "correctness": 2,
+        "completeness": 2,
+        "citations": 2,
+    }
