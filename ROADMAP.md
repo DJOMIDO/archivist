@@ -135,6 +135,11 @@ local OpenAI-compatible server.
     verify unchanged data, case formatting, document content, renaming, ignored
     files, corpus relocation, and empty-corpus rejection (74 tests overall)
   - [ ] Capture run settings and bind fingerprints to index construction
+    - [x] Verify offline configuration preview with explicit model-variant label,
+      selected non-secret parameters, data fingerprints, and installed versions
+    - [x] Add strict `RunParameters` and ten offline cases for JSON round trips,
+      invalid parameter values/types, and unexpected secret fields (84 tests overall)
+    - [ ] Use recorded parameters for execution and build a fresh associated index
 - [x] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
@@ -244,6 +249,20 @@ pending before declaring the formal baseline.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Added strict `RunParameters` and switched configuration preview
+  to serialize this explicit non-secret parameter model. Ten new offline test
+  cases cover JSON round trips with/without a distance threshold, invalid ranges,
+  strict integer typing, chunk overlap, blank variant labels, and unexpected API
+  key fields (84 tests passing). The batch runner still needs to consume these
+  parameters and construct an associated fresh evaluation index.
+
+- **2026-10-28** — Verified offline configuration preview for the current MLX
+  8-bit label, selected chat/embedding/chunk parameters, effective prototype
+  retrieval settings (k=4, no distance threshold), data fingerprints, Python,
+  and installed package versions. The label is user-supplied rather than server
+  detected. This preview is not a historical run record; shared execution
+  parameters, index association, and persisted run metadata remain pending.
 
 - **2026-10-28** — Extracted typed evaluation data fingerprints and added seven
   offline tests. Fingerprints detect case-byte, document-content, and relative

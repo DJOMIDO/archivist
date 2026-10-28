@@ -271,3 +271,25 @@ def fingerprint_eval_data(cases_path: Path, corpus_dir: Path) -> EvalFingerprint
         corpus_sha256=sha256(encoded).hexdigest(),
         files=files,
     )
+
+
+class RunParameters(BaseModel):
+    """Non-secret parameters used for an evaluation run."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    chat_variant: NonEmptyText
+    chat_model: NonEmptyText
+    chat_temperature: float = Field(ge=0, le=2)
+    chat_reasoning_effort: str | None
+    embedding_model: NonEmptyText
+    chunk_size: int = Field(gt=0)
+    chunk_overlap: int = Field(ge=0)
+    k: int = Field(gt=0, le=20)
+    max_distance: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def check_chunking(self) -> Self:
+        if self.chunk_overlap >= self.chunk_size:
+            raise ValueError("chunk_overlap must be smaller than chunk_size")
+        return self
