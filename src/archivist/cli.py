@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from openai import APIConnectionError
 
@@ -45,6 +46,7 @@ def model_server_errors(settings: Settings) -> Iterator[None]:
 @app.callback()
 def main() -> None:
     """Archivist: ask questions about your own documents."""
+    load_dotenv(dotenv_path=".env")
 
 
 @app.command()

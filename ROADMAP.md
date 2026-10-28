@@ -89,7 +89,7 @@ local OpenAI-compatible server.
 **Goal:** measure quality before optimizing, so later changes are comparable.
 **Learning focus:** LangSmith tracing, datasets, evaluators.
 
-- [ ] Enable LangSmith tracing via env vars
+- [x] Enable LangSmith tracing via env vars
 - [ ] Small golden dataset (10–20 Q&A pairs over a sample corpus)
   - include "tempting" questions the notes can't answer (e.g. "Docker vs VM") and a
     non-zh/en question (French answers once cited passages while saying "not found")
@@ -190,6 +190,11 @@ local OpenAI-compatible server.
 ---
 
 ## Changelog
+
+- **2026-10-28** — Enabled LangSmith tracing for the CLI using agent-based
+  workspace configuration. Required `langsmith>=0.14.9` and
+  `langchain-core>=1.6.11`; disabled tracing during tests to keep them offline.
+  Verified the standalone smoke script and a real CLI answer trace.
 
 - **2026-10-09** — Desktop apps (LM Studio, Bionic) removed; models now served by the headless
   `llmster` daemon (`lms daemon up` + `lms server start`). Pitfall found: after the apps were
