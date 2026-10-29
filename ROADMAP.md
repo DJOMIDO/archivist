@@ -134,12 +134,16 @@ local OpenAI-compatible server.
   - [x] Extract typed `EvalFingerprints` and reusable `fingerprint_eval_data`;
     verify unchanged data, case formatting, document content, renaming, ignored
     files, corpus relocation, and empty-corpus rejection (74 tests overall)
-  - [ ] Capture run settings and bind fingerprints to index construction
+  - [x] Capture run settings and bind fingerprints to index construction
     - [x] Verify offline configuration preview with explicit model-variant label,
       selected non-secret parameters, data fingerprints, and installed versions
     - [x] Add strict `RunParameters` and ten offline cases for JSON round trips,
       invalid parameter values/types, and unexpected secret fields (84 tests overall)
-    - [ ] Use recorded parameters for execution and build a fresh associated index
+    - [x] Prepare an isolated run with copied input files, matching fingerprints,
+      recorded parameters/software, and a fresh six-chunk index; verify indexed status
+    - [x] Run all twelve cases from the prepared manifest using its recorded
+      parameters; confirm completed status, matching IDs/questions and snapshot hashes
+    - [ ] Add dedicated offline regression tests for preparation and execution guards
 - [x] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
@@ -249,6 +253,18 @@ pending before declaring the formal baseline.
 ---
 
 ## Changelog
+
+- **2026-10-29** — Verified recorded run `20261028T214751612403Z` completed all
+  twelve cases using its prepared snapshot/index. Result IDs and questions match
+  the snapshot; fingerprints remain unchanged. All nine answerable cases have
+  full source recall (mean 100%). Answer-quality reviews for this newly generated
+  batch are still pending and cannot be inherited from the earlier run. Dedicated
+  preparation/execution guard tests remain pending.
+
+- **2026-10-28** — Prepared run `20261028T214751612403Z` with a copied twelve-case,
+  six-document input snapshot, manifest, and fresh six-chunk Chroma index. Checked
+  indexed status, snapshot hashes, case count, and index presence. Generation from
+  this recorded run is pending; the old batch and its reviews remain separate.
 
 - **2026-10-28** — Added strict `RunParameters` and switched configuration preview
   to serialize this explicit non-secret parameter model. Ten new offline test
