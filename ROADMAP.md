@@ -146,7 +146,9 @@ local OpenAI-compatible server.
     - [x] Extract `load_indexed_run` and add eleven offline preflight tests:
       eligible state/schema, snapshot matching, index presence, software versions,
       and existing-result protection (95 tests overall)
-    - [ ] Add offline preparation/execution lifecycle coverage beyond preflight checks
+    - [x] Add three offline workflow tests with real local Chroma and fake models:
+      snapshot/recorded-parameter isolation, partial-result preservation on generation
+      failure, and no indexed status on preparation failure (98 tests overall)
 - [x] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
@@ -256,6 +258,13 @@ pending before declaring the formal baseline.
 ---
 
 ## Changelog
+
+- **2026-10-30** — Added three offline script-workflow tests using temporary
+  directories, real persistent Chroma, and fake embedding/chat dependencies.
+  Verified successful preparation/execution uses copied inputs and recorded model
+  parameters despite changes to the originals/current settings. Verified generation
+  failure preserves earlier rows without completed status, and embedding setup
+  failure leaves prepared status without results (98 tests passing).
 
 - **2026-10-30** — Extracted `load_indexed_run` with explicitly supplied current
   software versions and removed duplicate checks from the execution script.
