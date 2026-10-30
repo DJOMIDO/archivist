@@ -14,9 +14,9 @@ from langchain_core.tracers.langchain import wait_for_all_tracers
 
 from archivist.config import Settings
 from archivist.evaluation import (
-    RunParameters,
     fingerprint_eval_data,
     load_eval_cases,
+    load_indexed_run,
     run_eval_case,
 )
 from archivist.indexing import get_embeddings, get_vector_store
@@ -30,26 +30,25 @@ load_dotenv(dotenv_path=".env")
 settings = Settings()
 run_dir = args.run_dir
 manifest = run_dir / "manifest.json"
-record = json.loads(manifest.read_text(encoding="utf-8"))
+current_packages = {
+    package: version(package)
+    for package in (
+        "langchain-core",
+        "langchain-openai",
+        "langchain-chroma",
+        "langchain-text-splitters",
+        "langsmith",
+        "chromadb",
+    )
+}
+record, parameters = load_indexed_run(
+    run_dir,
+    current_python=python_version(),
+    current_packages=current_packages,
+)
 
-if record["schema_version"] != 1 or record["status"] != "indexed":
-    raise ValueError("Expected an indexed run with schema version 1")
-
-parameters = RunParameters.model_validate(record["parameters"])
 cases_path = run_dir / "inputs/cases.json"
 corpus = run_dir / "inputs/corpus"
-
-if asdict(fingerprint_eval_data(cases_path, corpus)) != record["data"]:
-    raise ValueError("Input snapshot no longer matches the manifest")
-if not (run_dir / "chroma/chroma.sqlite3").is_file():
-    raise FileNotFoundError("Prepared index is missing")
-
-software = record["software"]
-if python_version() != software["python"] or any(
-    version(name) != expected for name, expected in software["packages"].items()
-):
-    raise ValueError("Software versions changed; prepare a new run")
-
 cases = load_eval_cases(cases_path, corpus)
 output = run_dir / "results.jsonl"
 

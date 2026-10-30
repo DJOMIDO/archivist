@@ -143,7 +143,10 @@ local OpenAI-compatible server.
       recorded parameters/software, and a fresh six-chunk index; verify indexed status
     - [x] Run all twelve cases from the prepared manifest using its recorded
       parameters; confirm completed status, matching IDs/questions and snapshot hashes
-    - [ ] Add dedicated offline regression tests for preparation and execution guards
+    - [x] Extract `load_indexed_run` and add eleven offline preflight tests:
+      eligible state/schema, snapshot matching, index presence, software versions,
+      and existing-result protection (95 tests overall)
+    - [ ] Add offline preparation/execution lifecycle coverage beyond preflight checks
 - [x] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
@@ -253,6 +256,14 @@ pending before declaring the formal baseline.
 ---
 
 ## Changelog
+
+- **2026-10-30** — Extracted `load_indexed_run` with explicitly supplied current
+  software versions and removed duplicate checks from the execution script.
+  Added eleven offline cases for matching runs, rejected states/schema, modified
+  case/document snapshots, missing index files, changed Python/package versions,
+  and preserving existing results (95 tests passing). These tests cover preflight
+  validation using an index-file placeholder, not Chroma contents or the complete
+  preparation/execution lifecycle.
 
 - **2026-10-29** — Verified recorded run `20261028T214751612403Z` completed all
   twelve cases using its prepared snapshot/index. Result IDs and questions match

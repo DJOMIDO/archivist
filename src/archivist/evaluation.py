@@ -1,7 +1,7 @@
 """Load evaluation datasets and run individual cases."""
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from hashlib import sha256
 from pathlib import Path
 from time import perf_counter
@@ -293,3 +293,34 @@ class RunParameters(BaseModel):
         if self.chunk_overlap >= self.chunk_size:
             raise ValueError("chunk_overlap must be smaller than chunk_size")
         return self
+
+
+def load_indexed_run(
+    run_dir: Path,
+    current_python: str,
+    current_packages: dict[str, str],
+) -> tuple[dict, RunParameters]:
+    """Load a prepared run and reject incompatible execution inputs."""
+    record = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    if record["schema_version"] != 1 or record["status"] != "indexed":
+        raise ValueError("Expected an indexed run with schema version 1")
+
+    parameters = RunParameters.model_validate(record["parameters"])
+    fingerprints = fingerprint_eval_data(
+        run_dir / "inputs/cases.json",
+        run_dir / "inputs/corpus",
+    )
+    if asdict(fingerprints) != record["data"]:
+        raise ValueError("Input snapshot no longer matches the manifest")
+
+    if not (run_dir / "chroma/chroma.sqlite3").is_file():
+        raise FileNotFoundError("Prepared index is missing")
+
+    software = record["software"]
+    if current_python != software["python"] or current_packages != software["packages"]:
+        raise ValueError("Software versions changed; prepare a new run")
+
+    if (run_dir / "results.jsonl").exists():
+        raise FileExistsError("Run already has results; prepare a new run")
+
+    return record, parameters
