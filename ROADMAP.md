@@ -98,6 +98,14 @@ local OpenAI-compatible server.
   - [x] Include three unanswerable questions, French answer and refusal cases,
     and two questions requiring multiple sources
 - [ ] Retrieval check (is the expected source retrieved?) and answer check (LLM-as-judge or reference match)
+  - [x] Verify standalone local reference judge on saved `indexing-001`: valid
+    structured output and a matching-reference verdict for the correct SHA-256 answer
+  - [x] Check the reference judge rejects a SHA-256 answer with an appended
+    contradictory MD5 claim, explaining the contradiction
+  - [x] Extract `ReferenceGrade`, reference-judge prompt, and dependency-injected
+    `grade_reference`; add six offline cases for payload/verdict handling, request
+    failure propagation, and strict output fields (104 tests overall)
+  - [ ] Persist batch reference grades with judge provenance and summarize coverage
   - [x] Standalone batch prototype saves all 12 cases as JSONL with retrieved
     sources/distances, answers, citations, and separate retrieval/generation timings
   - [x] Extract dependency-injected `run_eval_case` with typed result records;
@@ -258,6 +266,28 @@ pending before declaring the formal baseline.
 ---
 
 ## Changelog
+
+- **2026-10-31** — Extracted `ReferenceGrade`, `REFERENCE_JUDGE_PROMPT`, and
+  dependency-injected `grade_reference`; the smoke script retains input selection,
+  model configuration, and display. Six offline cases verify structured-output
+  setup, payload contents, preservation of true/false verdicts, propagation of
+  judge failures, and invalid output fields (104 tests passing). These tests
+  verify code behavior; semantic judge calibration remains limited to the two
+  previously observed real-model examples. Batch grading/provenance is pending.
+
+- **2026-10-31** — Calibrated the standalone reference judge with one deliberately
+  contradictory candidate: the saved SHA-256 answer plus an MD5 claim. It returned
+  false and identified the conflict. Together with the correct-answer smoke check,
+  this verifies two examples, not general judge accuracy. Restore the unmodified
+  candidate input before reusable judge extraction and offline tests.
+
+- **2026-10-31** — Verified the standalone local reference judge on recorded run
+  `20261028T214751612403Z`, case `indexing-001`: JSON-schema output parsed and
+  correctly accepted the SHA-256 answer. An initial connection-refused error was
+  resolved by starting the local model service. Negative-case calibration and
+  reusable judge implementation/tests remain pending. The owner reports moving
+  model files to an external SSD, with the original local model directory linked
+  to the corresponding SSD directory; the local API remains the integration point.
 
 - **2026-10-30** — Added three offline script-workflow tests using temporary
   directories, real persistent Chroma, and fake embedding/chat dependencies.
