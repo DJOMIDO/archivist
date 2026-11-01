@@ -1,6 +1,7 @@
 """Load evaluation datasets and run individual cases."""
 
 import json
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -368,3 +369,43 @@ def grade_reference(
             ("human", json.dumps(payload, ensure_ascii=False)),
         ]
     )
+
+
+class ReferenceGradeRecord(BaseModel):
+    """One reference judgment tied to its input snapshots."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: NonEmptyText
+    question: NonEmptyText
+    answerable: bool
+    reference_answer_snapshot: str
+    answer_snapshot: str
+    grade: ReferenceGrade
+
+
+def iter_reference_grades(
+    cases: list[EvalCase],
+    answers: dict[str, str],
+    llm: BaseChatModel,
+) -> Iterator[ReferenceGradeRecord]:
+    """Yield one grade at a time and propagate judge failures."""
+    case_ids = [case.id for case in cases]
+    if not case_ids:
+        raise ValueError("Expected a non-empty dataset")
+    if len(set(case_ids)) != len(case_ids):
+        raise ValueError("Duplicate dataset IDs")
+    if set(answers) != set(case_ids):
+        raise ValueError("Answer IDs do not match dataset IDs")
+
+    for case in cases:
+        answer = answers[case.id]
+        grade = grade_reference(case, answer, llm)
+        yield ReferenceGradeRecord(
+            id=case.id,
+            question=case.question,
+            answerable=case.answerable,
+            reference_answer_snapshot=case.reference_answer,
+            answer_snapshot=answer,
+            grade=grade,
+        )

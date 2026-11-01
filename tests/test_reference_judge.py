@@ -10,6 +10,7 @@ from archivist.evaluation import (
     EvalCase,
     ReferenceGrade,
     grade_reference,
+    iter_reference_grades,
 )
 
 
@@ -82,3 +83,89 @@ def test_reject_invalid_grade_fields(changes):
 
     with pytest.raises(ValidationError):
         ReferenceGrade.model_validate(values)
+
+
+@pytest.fixture
+def batch_inputs(judge_case):
+    second = EvalCase.model_validate({**judge_case.model_dump(), "id": "judge-002"})
+    cases = [judge_case, second]
+    answers = {
+        second.id: "Second candidate",
+        judge_case.id: "First candidate",
+    }
+    return cases, answers
+
+
+def test_batch_yields_ordered_snapshots_and_preserves_false(batch_inputs):
+    cases, answers = batch_inputs
+    llm = Mock(spec=BaseChatModel)
+    llm.with_structured_output.return_value.invoke.side_effect = [
+        ReferenceGrade(matches_reference=True, reason="First stub verdict."),
+        ReferenceGrade(matches_reference=False, reason="Second stub verdict."),
+    ]
+
+    grades = iter_reference_grades(cases, answers, llm)
+    llm.with_structured_output.assert_not_called()
+    rows = list(grades)
+
+    assert [row.id for row in rows] == [case.id for case in cases]
+    assert [row.grade.matches_reference for row in rows] == [True, False]
+    for case, row in zip(cases, rows, strict=True):
+        assert row.question == case.question
+        assert row.answerable == case.answerable
+        assert row.answer_snapshot == answers[case.id]
+        assert row.reference_answer_snapshot == case.reference_answer
+    assert llm.with_structured_output.return_value.invoke.call_count == 2
+    assert rows[1].model_dump(mode="json")["grade"]["matches_reference"] is False
+
+
+def test_batch_propagates_failure_after_yielding_first_grade(batch_inputs):
+    cases, answers = batch_inputs
+    llm = Mock(spec=BaseChatModel)
+    llm.with_structured_output.return_value.invoke.side_effect = [
+        ReferenceGrade(matches_reference=False, reason="First stub verdict."),
+        RuntimeError("second request failed"),
+    ]
+    grades = iter_reference_grades(cases, answers, llm)
+
+    first = next(grades)
+    assert first.id == cases[0].id
+    assert first.grade.matches_reference is False
+    with pytest.raises(RuntimeError, match="second request failed"):
+        next(grades)
+
+
+@pytest.mark.parametrize("problem", ["missing", "extra"])
+def test_batch_rejects_mismatched_answer_ids(batch_inputs, problem):
+    cases, answers = batch_inputs
+    if problem == "missing":
+        answers.pop(cases[-1].id)
+    else:
+        answers["unknown"] = "Unexpected answer"
+    llm = Mock(spec=BaseChatModel)
+
+    with pytest.raises(ValueError, match="Answer IDs do not match"):
+        list(iter_reference_grades(cases, answers, llm))
+    llm.with_structured_output.assert_not_called()
+
+
+def test_batch_rejects_empty_dataset():
+    llm = Mock(spec=BaseChatModel)
+
+    with pytest.raises(ValueError, match="non-empty dataset"):
+        list(iter_reference_grades([], {}, llm))
+    llm.with_structured_output.assert_not_called()
+
+
+def test_batch_rejects_duplicate_case_ids(judge_case):
+    llm = Mock(spec=BaseChatModel)
+
+    with pytest.raises(ValueError, match="Duplicate dataset IDs"):
+        list(
+            iter_reference_grades(
+                [judge_case, judge_case],
+                {judge_case.id: "Candidate"},
+                llm,
+            )
+        )
+    llm.with_structured_output.assert_not_called()

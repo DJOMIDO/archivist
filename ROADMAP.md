@@ -105,7 +105,12 @@ local OpenAI-compatible server.
   - [x] Extract `ReferenceGrade`, reference-judge prompt, and dependency-injected
     `grade_reference`; add six offline cases for payload/verdict handling, request
     failure propagation, and strict output fields (104 tests overall)
-  - [ ] Persist batch reference grades with judge provenance and summarize coverage
+  - [x] Verify standalone batch reference grading with judge provenance and coverage:
+    12/12 graded, 12/12 reference matches for the recorded run
+  - [x] Extract typed `ReferenceGradeRecord` and lazy `iter_reference_grades`;
+    six new offline cases cover ordered snapshots, false verdicts, partial failure,
+    and invalid case/answer IDs (110 tests overall)
+  - [ ] Add offline script tests for persisted grades, provenance, and partial-failure counts
   - [x] Standalone batch prototype saves all 12 cases as JSONL with retrieved
     sources/distances, answers, citations, and separate retrieval/generation timings
   - [x] Extract dependency-injected `run_eval_case` with typed result records;
@@ -266,6 +271,24 @@ pending before declaring the formal baseline.
 ---
 
 ## Changelog
+
+- **2026-11-01** — Extracted typed per-case reference-grade records and a lazy,
+  dependency-injected batch grading iterator. The script retains incremental
+  writes, progress counts, and metadata updates. Six new offline cases verify
+  input-to-record mapping independent of answer-dictionary order, preserved false
+  verdicts, deferred model calls, exception propagation after a yielded record,
+  and rejected empty/duplicate/mismatched IDs (110 tests passing). Actual script
+  persistence and provenance/failure-count regression coverage remain pending.
+
+- **2026-11-01** — Completed standalone batch reference grading of recorded run
+  `20261028T214751612403Z`; grading batch `20261101T204407833512Z` contains twelve
+  grades, all reference matches. Verified saved answer/reference snapshots, IDs,
+  questions, result-file hash, input fingerprints, metadata counts, and completed
+  status. Judge: Qwen3.5-9B, user-labeled MLX 8-bit, temperature 0, thinking off.
+  Spot-checked the cross-source comparison and French refusal reasons. A prior
+  connection-refused attempt was preserved as incomplete with 0/12 grades. The
+  100% figure is this judge's reference-match rate, not independently verified
+  factual/citation accuracy. Reusable batch implementation/tests remain pending.
 
 - **2026-10-31** — Extracted `ReferenceGrade`, `REFERENCE_JUDGE_PROMPT`, and
   dependency-injected `grade_reference`; the smoke script retains input selection,
