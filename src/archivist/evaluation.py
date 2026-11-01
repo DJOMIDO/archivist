@@ -4,7 +4,9 @@ import json
 from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 from hashlib import sha256
+from math import isfinite
 from pathlib import Path
+from statistics import mean
 from time import perf_counter
 from typing import Annotated, Literal, Self
 
@@ -409,3 +411,107 @@ def iter_reference_grades(
             answer_snapshot=answer,
             grade=grade,
         )
+
+
+def build_eval_report(run_dir: Path, grade_dir: Path) -> dict:
+    """Validate a completed run and grading batch, then calculate metrics."""
+    record = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    metadata = json.loads((grade_dir / "metadata.json").read_text(encoding="utf-8"))
+
+    if record["schema_version"] != 1 or metadata["schema_version"] != 1:
+        raise ValueError("Unsupported record schema")
+    if record["status"] != "completed" or metadata["status"] != "completed":
+        raise ValueError("A full report requires completed generation and grading")
+    if metadata["source_run_id"] != record["run_id"]:
+        raise ValueError("Grading belongs to another answer run")
+
+    cases_path = run_dir / "inputs/cases.json"
+    corpus = run_dir / "inputs/corpus"
+    cases = load_eval_cases(cases_path, corpus)
+    fingerprints = asdict(fingerprint_eval_data(cases_path, corpus))
+
+    if fingerprints != record["data"] or fingerprints != metadata["data"]:
+        raise ValueError("Input fingerprints do not match")
+
+    result_bytes = (run_dir / "results.jsonl").read_bytes()
+    if sha256(result_bytes).hexdigest() != metadata["results_sha256"]:
+        raise ValueError("Grading does not match the answer file")
+
+    rows = [json.loads(line) for line in result_bytes.decode("utf-8").splitlines()]
+    grades = [
+        ReferenceGradeRecord.model_validate_json(line)
+        for line in (grade_dir / "grades.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    by_id = {row["id"]: row for row in rows}
+    grade_by_id = {grade.id: grade for grade in grades}
+
+    if len(by_id) != len(rows) or len(grade_by_id) != len(grades):
+        raise ValueError("Duplicate result or grade IDs")
+    expected_ids = {case.id for case in cases}
+    if set(by_id) != expected_ids or set(grade_by_id) != expected_ids:
+        raise ValueError("Results and grades must cover the complete dataset")
+
+    recalls = []
+    for case in cases:
+        row = by_id[case.id]
+        grade = grade_by_id[case.id]
+
+        if row["question"] != case.question or grade.question != case.question:
+            raise ValueError(f"Question mismatch: {case.id}")
+        if (
+            grade.answer_snapshot != row["answer"]
+            or grade.reference_answer_snapshot != case.reference_answer
+            or grade.answerable != case.answerable
+        ):
+            raise ValueError(f"Grade snapshot mismatch: {case.id}")
+
+        score = source_recall(
+            case.expected_sources,
+            [hit["source"] for hit in row["retrieved"]],
+        )
+        if score is not None:
+            recalls.append(score)
+
+    passed = sum(grade.grade.matches_reference for grade in grades)
+    if (
+        record["completed_cases"] != len(cases)
+        or metadata["expected_cases"] != len(cases)
+        or metadata["graded_cases"] != len(grades)
+        or metadata["passed_cases"] != passed
+    ):
+        raise ValueError("Recorded counts do not match saved rows")
+
+    timings = [
+        row[field] for row in rows for field in ("retrieve_seconds", "generate_seconds")
+    ]
+    if any(
+        type(value) not in (int, float) or not isfinite(value) or value < 0
+        for value in timings
+    ):
+        raise ValueError("Timings must be finite non-negative numbers")
+
+    return {
+        "run_id": record["run_id"],
+        "grading_batch": grade_dir.name,
+        "parameters": record["parameters"],
+        "judge": metadata["judge"],
+        "rubric_version": metadata["rubric_version"],
+        "metrics": {
+            "cases": len(cases),
+            "source_recall_cases": len(recalls),
+            "mean_source_recall": mean(recalls) if recalls else None,
+            "graded_cases": len(grades),
+            "reference_matches": passed,
+            "reference_match_rate": passed / len(cases),
+            "mean_retrieve_seconds": mean(row["retrieve_seconds"] for row in rows),
+            "mean_generate_seconds": mean(row["generate_seconds"] for row in rows),
+        },
+        "timing_note": (
+            "Single run; no controlled warm-up; includes request overhead."
+        ),
+        "scoring_note": (
+            "Reference matching is a judge verdict; citation accuracy is not scored."
+        ),
+    }

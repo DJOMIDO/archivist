@@ -142,7 +142,7 @@ local OpenAI-compatible server.
     both expected sources were cited, but the answer contradicted itself
   - [x] Confirm `privacy-002`: complete French refusal without citations;
     the documents do not specify external diagnostic data retention
-- [ ] Record baseline scores in this file
+- [x] Record baseline scores in this file
   - [x] Verify standalone SHA-256 fingerprints for raw case-file bytes and a
     sorted mapping of corpus-relative paths to supported-file content hashes
   - [x] Extract typed `EvalFingerprints` and reusable `fingerprint_eval_data`;
@@ -163,10 +163,46 @@ local OpenAI-compatible server.
     - [x] Add three offline workflow tests with real local Chroma and fake models:
       snapshot/recorded-parameter isolation, partial-result preservation on generation
       failure, and no indexed status on preparation failure (98 tests overall)
+- [x] Verify standalone report binds completed generation/grading, input hashes,
+  answer/reference snapshots, IDs, counts, and finite non-negative timings
+- [x] Extract `build_eval_report` and add thirteen offline cases for metric
+  denominators/means, mismatched metadata, changed snapshots, missing grades,
+  and invalid timings (126 tests overall)
+- [ ] Provide one command for preparation, execution, grading, and reporting
 - [x] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
 **Done when:** one command runs the eval and baseline numbers are recorded.
+
+**Recorded single-run baseline (MLX 8-bit):**
+
+Answer run: `20261028T214751612403Z`; grading batch: `20261101T204407833512Z`.
+Artifacts live under local `storage/eval-runs/`. The offline report validates their
+association before calculating metrics.
+
+Chat: `qwen/qwen3.5-9b`, user-labeled MLX 8-bit, temperature 0.2, thinking off.
+Embeddings: `text-embedding-qwen3-embedding-0.6b`. Chunk size/overlap: 1000/200;
+retrieval k=4 with no distance threshold. Judge: the same model/variant at
+temperature 0, thinking off, using rubric `reference-v1`.
+
+| Metric | Result |
+|--------|--------|
+| Corpus / cases | 6 documents / 12 questions |
+| Mean source recall | 100% across 9 answerable cases |
+| Reference-grade coverage | 12/12 |
+| Reference matches | 12/12 (100%) |
+| Mean retrieval time | 1.310 s |
+| Mean generation time | 13.865 s |
+
+Case-file SHA-256: `121ef4e82882deceb33130cf88cf68f5cfe318a308b6d9f6ab24cd243524580d`.
+Corpus SHA-256: `ef021c03839850ce5eec2bbcaf0be714b18d63518895643bff3734f94a588f5f`.
+
+These are single-run measurements without controlled warm-up; timings include
+request overhead. Reference matching is a local-model judgment, not independently
+verified factual accuracy, and citation accuracy is not automatically scored.
+The three unanswerable cases are excluded from source recall but included in
+reference grading. Report module/tests, one-command orchestration, and the 4-bit
+comparison remain pending; M2 is still in progress.
 
 **Preliminary batch observations (not the final reproducible baseline):**
 
@@ -179,8 +215,8 @@ cases are excluded from that metric. The assistant inspected the saved answers
 against rubric v1 and the corpus, including the ten newly recorded judgments;
 these scores are not independent human ratings or a separately calibrated judge.
 This single small-corpus run does not erase the earlier contradictory smoke answer.
-Run configuration/corpus version capture and a unified evaluation command remain
-pending before declaring the formal baseline.
+This earlier batch lacked the run configuration/snapshot capture used by the
+recorded baseline above. Its reviews remain separate from the newer run.
 
 ---
 
@@ -272,6 +308,20 @@ pending before declaring the formal baseline.
 ---
 
 ## Changelog
+
+- **2026-11-01** — Extracted `build_eval_report`; the report script now handles
+  arguments and JSON display only. Thirteen offline cases verify partial source
+  recall, unanswerable-case exclusion, reference-match denominators, mean timings,
+  rejected incomplete/mixed/hash-mismatched/count-mismatched metadata, changed
+  inputs/answer snapshots, missing grades, and invalid timing values (126 tests
+  passing). The recorded 8-bit report remains unchanged.
+
+- **2026-11-01** — Verified the standalone unified report and recorded the 8-bit
+  single-run baseline: nine-case mean source recall 100%, twelve-case reference
+  match rate 100%, mean retrieval 1.310 s, and mean generation 13.865 s. The report
+  checks completed states, run identity, hashes, per-case snapshots, coverage/counts,
+  and finite non-negative timings. No new model calls were needed. Report module
+  extraction/tests, one-command orchestration, and 4-bit comparison remain pending.
 
 - **2026-11-01** — Added three offline batch-judge script cases verifying saved
   true/false grades, source-run/result/input/prompt provenance, judge configuration,
