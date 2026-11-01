@@ -110,7 +110,8 @@ local OpenAI-compatible server.
   - [x] Extract typed `ReferenceGradeRecord` and lazy `iter_reference_grades`;
     six new offline cases cover ordered snapshots, false verdicts, partial failure,
     and invalid case/answer IDs (110 tests overall)
-  - [ ] Add offline script tests for persisted grades, provenance, and partial-failure counts
+  - [x] Add three offline script cases for persisted true/false grades, provenance,
+    unchanged answers, and failures before/after the first grade (113 tests overall)
   - [x] Standalone batch prototype saves all 12 cases as JSONL with retrieved
     sources/distances, answers, citations, and separate retrieval/generation timings
   - [x] Extract dependency-injected `run_eval_case` with typed result records;
@@ -271,6 +272,12 @@ pending before declaring the formal baseline.
 ---
 
 ## Changelog
+
+- **2026-11-01** — Added three offline batch-judge script cases verifying saved
+  true/false grades, source-run/result/input/prompt provenance, judge configuration,
+  output schema, secret exclusion, and unchanged original answers. Failures on the
+  first or second request preserve the actual completed rows, mark the batch
+  incomplete, and do not fabricate failed grades (113 tests passing).
 
 - **2026-11-01** — Extracted typed per-case reference-grade records and a lazy,
   dependency-injected batch grading iterator. The script retains incremental
