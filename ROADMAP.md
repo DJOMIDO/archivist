@@ -168,7 +168,10 @@ local OpenAI-compatible server.
 - [x] Extract `build_eval_report` and add thirteen offline cases for metric
   denominators/means, mismatched metadata, changed snapshots, missing grades,
   and invalid timings (126 tests overall)
-- [ ] Provide one command for preparation, execution, grading, and reporting
+- [x] Provide one command for preparation, execution, grading, and reporting
+  - [x] Verify `scripts/eval_all.py` creates a fresh run and saves validated `report.json`
+  - [x] Add two offline unified-entry tests for separate candidate/judge models,
+    saved reports, stop-on-failure, and restored environment/argv (128 tests overall)
 - [x] Measure latency (retrieve / generate) alongside quality
 - [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
 
@@ -201,8 +204,16 @@ These are single-run measurements without controlled warm-up; timings include
 request overhead. Reference matching is a local-model judgment, not independently
 verified factual accuracy, and citation accuracy is not automatically scored.
 The three unanswerable cases are excluded from source recall but included in
-reference grading. Report module/tests, one-command orchestration, and the 4-bit
-comparison remain pending; M2 is still in progress.
+reference grading. Report module/tests and one-command execution are verified;
+unified-entry regression tests also pass. The 4-bit comparison and documentation
+closeout remain pending. M2 is still in progress.
+
+**Unified-command confirmation run:** `20261101T223119480432Z`, grading batch
+`20261101T223350953139Z`, with the same recorded data fingerprints, 8-bit model
+labels, and parameters. Source recall is 100% across nine answerable cases;
+reference matches are 12/12. Mean retrieval/generation times are 1.418/9.617 s.
+The saved `report.json` matches a fresh offline recomputation. These uncontrolled
+single-run timing differences do not establish an SSD or other causal speedup.
 
 **Preliminary batch observations (not the final reproducible baseline):**
 
@@ -308,6 +319,21 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-01** — Added two offline unified-entry tests with real temporary
+  Chroma and fake models. Verified distinct candidate/judge IDs and temperatures,
+  saved complete reports, restoration of prior environment/argv on success, and
+  stopping before report generation when grading fails. Failure preserves the
+  completed answer run and incomplete grading record, and removes temporary model
+  overrides when no prior value existed (128 tests passing). M2 now awaits the
+  4-bit comparison and final documentation closeout.
+
+- **2026-11-01** — Verified the unified evaluation entry on a new real-model run
+  `20261101T223119480432Z`. Preparation, twelve answers, twelve reference grades,
+  and saved report completed in order. Report recomputation matches the saved
+  artifact: source recall 100%, reference matches 12/12, mean retrieval 1.418 s,
+  mean generation 9.617 s. Candidate/judge model selection is explicit; unified
+  entry regression tests and the controlled 4-bit comparison remain pending.
 
 - **2026-11-01** — Extracted `build_eval_report`; the report script now handles
   arguments and JSON display only. Thirteen offline cases verify partial source
