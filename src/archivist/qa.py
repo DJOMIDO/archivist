@@ -38,10 +38,11 @@ CITATION = re.compile(r"\[(\d+)\]")
 
 @dataclass(frozen=True)
 class Citation:
-    """A cited source location with an optional 1-based page number."""
+    """A cited source location with optional page and section metadata."""
 
     source: str
     page: int | None = None
+    section: str | None = None
 
 
 @dataclass
@@ -74,13 +75,16 @@ def get_chat_model(
 
 
 def format_context(chunks: list[Document]) -> str:
-    """Number context passages and include page numbers when available."""
+    """Number context passages and include available page/section metadata."""
     passages: list[str] = []
     for index, chunk in enumerate(chunks, start=1):
         source = Path(chunk.metadata["source"]).name
         page = chunk.metadata.get("page")
         if page is not None:
             source = f"{source}, page {page}"
+        section = chunk.metadata.get("section")
+        if section is not None:
+            source = f"{source}, section {section}"
 
         passages.append(f"[{index}] (from {source})\n{chunk.page_content}")
 
@@ -100,7 +104,7 @@ def cited_sources(text: str, chunks: list[Document]) -> list[str]:
 
 
 def cited_references(text: str, chunks: list[Document]) -> list[Citation]:
-    """Return unique source/page references in citation appearance order."""
+    """Return unique source locations in citation appearance order."""
     references: list[Citation] = []
     for match in CITATION.finditer(text):
         index = int(match.group(1))
@@ -109,6 +113,7 @@ def cited_references(text: str, chunks: list[Document]) -> list[Citation]:
             reference = Citation(
                 source=metadata["source"],
                 page=metadata.get("page"),
+                section=metadata.get("section"),
             )
             if reference not in references:
                 references.append(reference)

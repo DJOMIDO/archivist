@@ -312,12 +312,19 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Test cleanup/metadata, bodyless fragments, empty content, and missing files
   - [x] Register `.html`/`.htm` discovery and verify mixed-format loading
   - [x] Smoke-test HTML ingestion and grounded answers with source citations
-- [ ] EPUB loader (chapter/section metadata)
-  - [ ] Include section identity in chunk IDs
+- [x] EPUB loader (chapter/section metadata)
+  - [x] Inspect EPUB spine order and internal content-file identities in a standalone prototype
+  - [x] Verify spine-ordered text extraction with internal file paths as section metadata
+  - [x] Extract `load_epub` and verify unchanged smoke output
+  - [x] Test reading order/filtering/metadata/errors on generated EPUB input
+  - [x] Register EPUB discovery and verify mixed-format loading
+  - [x] Smoke-test real EPUB ingestion and grounded answers with section citations
+  - [x] Include section identity in chunk IDs
 - [ ] Metadata: `file_type`, `page`/`section`, `ingested_at`, `content_hash`
 - [ ] Document registry + content-hash dedup; replace chunks of changed files
 - [ ] CLI: `archivist list`, `archivist remove <source>`
-- [ ] Include page/section in answer context and displayed citations
+- [x] Include page/section in answer context and displayed citations
+  - [x] Preserve EPUB section identity in context, Citation records, and CLI display
   - [x] Include PDF page numbers in numbered answer context
   - [x] Map passage references to unique source/page records in citation order
   - [x] Preserve source paths separately from page-aware citation display
@@ -397,6 +404,54 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-03** — The owner verified a real-model EPUB answer naming the two
+  Lewis Carroll books in the inspected bibliography, with the correct
+  `childrens-literature.epub` source and `s04.xhtml` section citation. EPUB
+  loading and page/section citation support are complete for this scope.
+  This confirms one end-to-end example, not general EPUB or citation accuracy.
+
+- **2026-11-03** — Verified all 168 offline tests after EPUB registration,
+  including lowercase/uppercase recursive mixed-format loading in spine order.
+  The real sample loads through the public entry point; splitting at 1000/200
+  produces 392 chunks with 392 unique IDs. Real-model EPUB Q&A remains pending.
+
+- **2026-11-03** — Verified all 166 offline tests after adding EPUB section
+  context, structured Citation identity, and CLI display. References retain
+  distinct sections while evaluation still receives raw source paths.
+  EPUB registration/mixed-format discovery is the next lesson.
+
+- **2026-11-03** — Verified section-aware chunk IDs with all 163 offline
+  tests passing. Repeated temporary Chroma upserts retain distinct sections
+  with matching start indices; existing text/PDF ID formats remain unchanged.
+  Next: carry section identity through context, structured references, and CLI.
+
+- **2026-11-03** — Verified all 161 offline tests, including generated EPUB
+  spine order, navigation/empty/out-of-spine exclusion, retained non-linear
+  text/footer notes, section metadata, and missing-file errors. Next: add
+  section-aware chunk identity before enabling EPUB discovery.
+
+- **2026-11-03** — Verified extracted `load_epub` on the real sample with
+  unchanged section/text length/preview. Next lesson uses generated EPUB input
+  with reversed spine order, navigation, empty content, an out-of-spine item,
+  and non-linear text to test the current extraction contract before indexing.
+
+- **2026-11-03** — The owner verified spine-ordered text extraction on
+  `childrens-literature.epub`: one non-empty Document for `s04.xhtml`, 313310
+  characters, with source/type/section metadata. Lint/format checks pass.
+  This establishes sample extraction behavior, not full text fidelity.
+  Module extraction and section-aware indexing/citations remain pending.
+
+- **2026-11-03** — Verified EbookLib 0.21 spine inspection on
+  `childrens-literature.epub`: image-only cover, navigation document, and
+  `s04.xhtml` content, all marked linear. Next prototype skips navigation and
+  text-empty items, preserves other spine text (including non-linear content),
+  and records content-file paths as section identities rather than chapter numbers.
+
+- **2026-11-02** — Start EPUB with an EbookLib spine-inspection prototype.
+  Inspect declared reading order and internal resource identities before text
+  extraction; EPUB content-file boundaries need not match logical chapters.
+  Section-aware chunk IDs and citation rendering remain required before integration.
 
 - **2026-11-02** — The owner verified an HTML end-to-end answer through the
   CLI: backups are retained for 14 days, matching the controlled sample body,

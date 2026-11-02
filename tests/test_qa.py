@@ -149,3 +149,31 @@ def test_answer_preserves_paths_and_page_references():
         Citation(source="/notes/lab.pdf", page=12),
         Citation(source="/notes/lab.pdf", page=7),
     ]
+
+
+def test_format_context_includes_epub_section():
+    chunk = Document(
+        page_content="Beta",
+        metadata={"source": "/notes/book.epub", "section": "b.xhtml"},
+    )
+
+    assert format_context([chunk]) == ("[1] (from book.epub, section b.xhtml)\nBeta")
+
+
+def test_answer_preserves_distinct_section_references():
+    chunks = [
+        Document(
+            page_content=f"Content from {section}",
+            metadata={"source": "/notes/book.epub", "section": section},
+        )
+        for section in ["a.xhtml", "b.xhtml", "a.xhtml"]
+    ]
+    llm = FakeListChatModel(responses=["Two facts [2][1][3]."])
+
+    answer = answer_question("What are the facts?", chunks, llm)
+
+    assert answer.sources == ["/notes/book.epub"]
+    assert answer.references == [
+        Citation(source="/notes/book.epub", section="b.xhtml"),
+        Citation(source="/notes/book.epub", section="a.xhtml"),
+    ]

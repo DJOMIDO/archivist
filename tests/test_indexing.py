@@ -81,3 +81,44 @@ def test_indexing_preserves_pages_with_same_start_index(tmp_path: Path):
     assert len(stored["ids"]) == 2
     assert set(stored["documents"]) == {"First page", "Second page"}
     assert {metadata["page"] for metadata in stored["metadatas"]} == {1, 2}
+
+
+def test_chunk_id_includes_section():
+    chunk = Document(
+        page_content="Alpha",
+        metadata={
+            "source": "/notes/a.epub",
+            "section": "a.xhtml",
+            "start_index": 0,
+        },
+    )
+
+    assert chunk_id(chunk) == "/notes/a.epub:section=a.xhtml:0"
+
+
+def test_indexing_preserves_sections_with_same_start_index(tmp_path: Path):
+    sections = [
+        Document(
+            page_content=text,
+            metadata={"source": "/notes/a.epub", "section": section},
+        )
+        for section, text in [
+            ("a.xhtml", "Alpha"),
+            ("b.xhtml", "Beta"),
+        ]
+    ]
+    chunks = split_documents(sections, chunk_size=100, chunk_overlap=0)
+    store = get_vector_store(DeterministicFakeEmbedding(size=16), tmp_path)
+
+    assert [chunk.metadata["start_index"] for chunk in chunks] == [0, 0]
+
+    index_chunks(store, chunks)
+    index_chunks(store, chunks)
+
+    stored = store.get()
+    assert len(stored["ids"]) == 2
+    assert set(stored["documents"]) == {"Alpha", "Beta"}
+    assert {metadata["section"] for metadata in stored["metadatas"]} == {
+        "a.xhtml",
+        "b.xhtml",
+    }

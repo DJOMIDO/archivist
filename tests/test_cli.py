@@ -86,3 +86,24 @@ def test_ask_displays_pdf_page(fake_backends):
     assert result.exit_code == 0
     assert "Redis keeps data in memory [1]." in result.output
     assert "Sources:\n  - /notes/lab.pdf, page 7" in result.output
+
+
+def test_ask_displays_epub_section(fake_backends):
+    fake_backends.add_documents(
+        [
+            Document(
+                page_content="Redis is in memory.",
+                metadata={
+                    "source": "/notes/book.epub",
+                    "section": "b.xhtml",
+                },
+            )
+        ],
+        ids=["epub-section-b"],
+    )
+
+    result = runner.invoke(app, ["ask", "Redis is in memory.", "--top-k", "1"])
+
+    assert result.exit_code == 0
+    assert "Redis keeps data in memory [1]." in result.output
+    assert "Sources:\n  - /notes/book.epub, section b.xhtml" in result.output

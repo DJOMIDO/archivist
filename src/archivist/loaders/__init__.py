@@ -6,6 +6,7 @@ from pathlib import Path
 from langchain_core.documents import Document
 
 from archivist.loaders.docx import load_docx
+from archivist.loaders.epub import load_epub
 from archivist.loaders.html import load_html
 from archivist.loaders.pdf import load_pdf
 from archivist.loaders.text import load_text
@@ -19,6 +20,7 @@ LOADERS: dict[str, Loader] = {
     ".docx": load_docx,
     ".html": load_html,
     ".htm": load_html,
+    ".epub": load_epub,
 }
 
 SUPPORTED_SUFFIXES = set(LOADERS)

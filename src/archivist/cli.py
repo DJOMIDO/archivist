@@ -99,11 +99,13 @@ def ask(
             k=top_k or settings.retrieval_top_k,
             max_distance=settings.retrieval_max_distance,
         )
-    typer.echo(answer.text)
+        typer.echo(answer.text)
     if answer.references:
         typer.echo("\nSources:")
         for reference in answer.references:
             label = reference.source
             if reference.page is not None:
                 label = f"{label}, page {reference.page}"
+            if reference.section is not None:
+                label = f"{label}, section {reference.section}"
             typer.echo(f"  - {label}")
