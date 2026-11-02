@@ -1,10 +1,20 @@
-"""Load documents from disk into LangChain `Document` objects."""
+"""Discover files and dispatch them to format-specific loaders."""
 
+from collections.abc import Callable
 from pathlib import Path
 
 from langchain_core.documents import Document
 
-SUPPORTED_SUFFIXES = {".md", ".txt"}
+from archivist.loaders.text import load_text
+
+Loader = Callable[[Path], list[Document]]
+
+LOADERS: dict[str, Loader] = {
+    ".md": load_text,
+    ".txt": load_text,
+}
+
+SUPPORTED_SUFFIXES = set(LOADERS)
 
 
 def find_files(path: Path) -> list[Path]:
@@ -26,18 +36,17 @@ def _is_hidden(path: Path, root: Path) -> bool:
     return any(part.startswith(".") for part in path.relative_to(root).parts)
 
 
-def load_file(path: Path) -> Document:
-    """Load a single text file as a `Document`."""
-    text = path.read_text(encoding="utf-8")
-    return Document(
-        page_content=text,
-        metadata={
-            "source": str(path.resolve()),
-            "file_type": path.suffix.lstrip(".").lower(),
-        },
-    )
+def load_file(path: Path) -> list[Document]:
+    """Load a file using its registered format-specific loader."""
+    loader = LOADERS.get(path.suffix.lower())
+    if loader is None:
+        raise ValueError(f"Unsupported file type: {path.suffix}")
+    return loader(path)
 
 
 def load_documents(path: Path) -> list[Document]:
-    """Load every supported document under `path`."""
-    return [load_file(p) for p in find_files(path)]
+    """Load and flatten Documents from every supported file under path."""
+    documents: list[Document] = []
+    for file_path in find_files(path):
+        documents.extend(load_file(file_path))
+    return documents

@@ -1,8 +1,9 @@
 from pathlib import Path
 
 import pytest
+from langchain_core.documents import Document
 
-from archivist.loaders import find_files, load_documents
+from archivist.loaders import LOADERS, find_files, load_documents, load_file
 
 
 def test_load_documents_from_directory(tmp_path: Path):
@@ -42,3 +43,47 @@ def test_skip_hidden_files_and_directories(tmp_path: Path):
     files = find_files(tmp_path)
 
     assert [p.name for p in files] == ["visible.md"]
+
+
+@pytest.mark.parametrize("suffix", [".MD", ".TXT"])
+def test_load_file_accepts_uppercase_suffix(tmp_path: Path, suffix: str):
+    path = tmp_path / f"note{suffix}"
+    path.write_text("Hello 你好", encoding="utf-8")
+
+    documents = load_file(path)
+
+    assert len(documents) == 1
+    assert documents[0].page_content == "Hello 你好"
+    assert documents[0].metadata == {
+        "source": str(path.resolve()),
+        "file_type": suffix[1:].lower(),
+    }
+
+
+def test_load_file_rejects_unsupported_suffix(tmp_path: Path):
+    path = tmp_path / "image.png"
+    path.write_bytes(b"\x89PNG")
+
+    with pytest.raises(ValueError, match="Unsupported file type"):
+        load_file(path)
+
+
+def test_load_documents_flattens_loader_results(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    path = tmp_path / "note.txt"
+    path.write_text("placeholder", encoding="utf-8")
+    expected = [
+        Document(page_content="First page", metadata={"page": 1}),
+        Document(page_content="Second page", metadata={"page": 2}),
+    ]
+
+    def fake_loader(file_path: Path) -> list[Document]:
+        assert file_path == path
+        return expected
+
+    monkeypatch.setitem(LOADERS, ".txt", fake_loader)
+
+    documents = load_documents(tmp_path)
+
+    assert documents == expected

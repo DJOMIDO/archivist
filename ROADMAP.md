@@ -11,7 +11,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 | M1        | Minimal RAG pipeline (MD/TXT)  | ✅     | `feat/minimal-rag-pipeline`    |
 | M1.5      | Local model runtime evaluation | ✅     | `refactor/openai-compatible-llm-provider` |
 | M2        | Evaluation baseline            | ✅     | `feat/eval-baseline`           |
-| M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
+| M3        | Multi-format ingestion         | 🟡     | `feat/multi-format-loaders`    |
 | M4        | Agentic RAG with LangGraph     | ⬜     | `feat/langgraph-agent`         |
 | M5        | Retrieval quality              | ⬜     | `feat/retrieval-improvements`  |
 | M6        | Web UI (Streamlit)             | ⬜     | `feat/streamlit-ui`            |
@@ -285,19 +285,24 @@ recorded baseline above. Its reviews remain separate from the newer run.
 
 ---
 
-## M3 — Multi-format ingestion ⬜
+## M3 — Multi-format ingestion 🟡
 
 **Goal:** ingest all target formats with rich metadata and incremental indexing.
 **Learning focus:** document loaders, metadata design, idempotent pipelines.
 
 - [ ] Loader registry keyed by file extension
+  - [x] Verify a standalone MD/TXT dispatch prototype returning `list[Document]`
+  - [x] Refactor loaders into a package and preserve existing imports (128 existing tests pass)
+  - [ ] Add offline tests for dispatch, unsupported extensions, and multi-Document flattening
 - [ ] PDF loader (page numbers in metadata)
+  - [ ] Include page/section identity in chunk IDs to avoid cross-page collisions
 - [ ] DOCX loader
 - [ ] HTML loader (strip boilerplate)
 - [ ] EPUB loader (chapter/section metadata)
 - [ ] Metadata: `file_type`, `page`/`section`, `ingested_at`, `content_hash`
 - [ ] Document registry + content-hash dedup; replace chunks of changed files
 - [ ] CLI: `archivist list`, `archivist remove <source>`
+- [ ] Include page/section in answer context and displayed citations
 - [ ] Re-run M2 eval
 
 **Done when:** a mixed-format folder ingests cleanly, re-ingesting is a no-op, and citations show page/section.
@@ -373,6 +378,21 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-02** — Extracted plain-text loading into `loaders/text.py` and
+  extension dispatch into `loaders/__init__.py`, preserving public import paths.
+  The owner reports all 128 existing tests and loader lint/format checks passing.
+  Dispatch and multi-Document regression coverage remain pending.
+
+- **2026-11-02** — Verified the standalone loader registry on the existing
+  Markdown corpus: one Document with source/type metadata and extracted text.
+  Package extraction and dispatch regression tests remain pending.
+
+- **2026-11-02** — Start M3 on `feat/multi-format-loaders`. Begin with a
+  standalone extension-dispatch prototype and a uniform `list[Document]`
+  loader contract before package extraction and format-specific dependencies.
+  Make page-aware chunk identity and citation rendering explicit acceptance
+  tasks; current source/start-index IDs can collide across PDF pages.
 
 - **2026-11-02** — Close M2 after verified model comparison and documentation
   review. README now documents unified/staged evaluation, saved artifacts,
