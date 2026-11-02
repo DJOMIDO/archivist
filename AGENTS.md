@@ -103,7 +103,7 @@ These rules override any default "just write the code" behavior.
 | Env / packaging    | `uv` + `pyproject.toml`                                                 |
 | Framework          | LangChain, LangGraph                                                    |
 | LLM & embeddings   | Any OpenAI-compatible server via `langchain-openai` (base URL in config); currently LM Studio's headless `llmster` on `localhost:1234` |
-| Default models     | Chat: `qwen/qwen3.5-9b` (MLX 8-bit, tool calling; thinking off via `reasoning_effort="none"`). Embeddings: `text-embedding-qwen3-embedding-0.6b` (GGUF Q8, 1024-dim, instruction-aware queries). **Changing the embedding model requires rebuilding the index.** |
+| Default models     | Chat: `qwen/qwen3.5-9b` (Hub-selected MLX variant, tool calling; thinking off via `reasoning_effort="none"`; verify quantization for experiments). Embeddings: `text-embedding-qwen3-embedding-0.6b` (GGUF Q8, 1024-dim, instruction-aware queries). **Changing the embedding model requires rebuilding the index.** |
 | Vector store       | Chroma (local persistent) via `langchain-chroma`                        |
 | Loaders            | pypdf / PyMuPDF (PDF), docx2txt or Unstructured (DOCX), BeautifulSoup (HTML), EPUB loader; plain readers for MD/TXT |
 | Configuration      | pydantic-settings (typed settings from env / `.env`)                    |
@@ -113,6 +113,18 @@ These rules override any default "just write the code" behavior.
 | Tracing / eval     | LangSmith                                                               |
 
 Pick concrete library versions when a milestone needs them; record notable choices in ROADMAP's changelog.
+
+Model provenance: an unqualified Hub model name can resolve to the selected
+quantization variant. `chat_variant` and `judge_variant` are user labels, not proof
+of loaded weights. For comparisons, verify loaded quantization, use unambiguous API
+identifiers, and record requested and observed context-length/parallelism settings.
+If MLX auto-fit overrides context length, document the discrepancy and limit
+comparison conclusions accordingly; do not claim equal effective context. Preserve the
+Hub configuration needed for `reasoning_effort="none"` when selecting variants.
+Local comparison definitions are `archivist/qwen35-4bit` and
+`archivist/qwen35-8bit`, installed under `~/.lmstudio/hub/models/archivist/`.
+Each references only its existing weight variant and preserves the original Hub
+operation/customFields; these definitions do not duplicate model weights.
 
 ---
 
@@ -128,9 +140,12 @@ archivist/
 │   ├── retrieval.py     # top-k search with distances (MMR / hybrid in M5)
 │   ├── qa.py            # grounded prompt, chat-model factory, citation → source mapping
 │   ├── pipeline.py      # wires the steps together; shared by CLI and future web UI
+│   ├── evaluation.py    # snapshots, run validation, reference grading and reports
 │   ├── agent/           # LangGraph state, nodes, graph, prompts (M4)
 │   └── cli.py           # Typer commands: thin layer that reads settings and prints
 ├── tests/
+├── scripts/             # tracing and evaluation entry points (read settings here)
+├── evals/               # versioned evaluation cases and fictional corpus
 ├── data/                # user documents (git-ignored)
 ├── storage/             # vector store + registry (git-ignored)
 ├── AGENTS.md
@@ -142,7 +157,7 @@ Data flow: **load → split → embed → store** (ingestion) and
 
 Design rules: model/provider details live only in the factory functions (`get_embeddings`,
 `get_chat_model`); core functions take their dependencies as arguments and never call
-`get_settings()` themselves — only the CLI (the program edge) reads settings.
+`get_settings()` themselves — CLI and script entry points read settings.
 
 This layout is a proposal; refine it as milestones are implemented and update this section.
 

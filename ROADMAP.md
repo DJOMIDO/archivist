@@ -10,7 +10,7 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 | M0        | Project scaffolding            | ✅     | `chore/project-scaffolding`    |
 | M1        | Minimal RAG pipeline (MD/TXT)  | ✅     | `feat/minimal-rag-pipeline`    |
 | M1.5      | Local model runtime evaluation | ✅     | `refactor/openai-compatible-llm-provider` |
-| M2        | Evaluation baseline            | 🟡     | `feat/eval-baseline`           |
+| M2        | Evaluation baseline            | ✅     | `feat/eval-baseline`           |
 | M3        | Multi-format ingestion         | ⬜     | `feat/multi-format-loaders`    |
 | M4        | Agentic RAG with LangGraph     | ⬜     | `feat/langgraph-agent`         |
 | M5        | Retrieval quality              | ⬜     | `feat/retrieval-improvements`  |
@@ -84,7 +84,7 @@ local OpenAI-compatible server.
 
 ---
 
-## M2 — Evaluation baseline 🟡
+## M2 — Evaluation baseline ✅
 
 **Goal:** measure quality before optimizing, so later changes are comparable.
 **Learning focus:** LangSmith tracing, datasets, evaluators.
@@ -97,7 +97,7 @@ local OpenAI-compatible server.
   - [x] Expand to 12 validated cases across six source documents
   - [x] Include three unanswerable questions, French answer and refusal cases,
     and two questions requiring multiple sources
-- [ ] Retrieval check (is the expected source retrieved?) and answer check (LLM-as-judge or reference match)
+- [x] Retrieval check (is the expected source retrieved?) and answer check (LLM-as-judge or reference match)
   - [x] Verify standalone local reference judge on saved `indexing-001`: valid
     structured output and a matching-reference verdict for the correct SHA-256 answer
   - [x] Check the reference judge rejects a SHA-256 answer with an appended
@@ -173,17 +173,71 @@ local OpenAI-compatible server.
   - [x] Add two offline unified-entry tests for separate candidate/judge models,
     saved reports, stop-on-failure, and restored environment/argv (128 tests overall)
 - [x] Measure latency (retrieve / generate) alongside quality
-- [ ] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
+- [x] Compare chat models on the same set: Qwen3.5-9B MLX 8-bit (current) vs 4-bit
+  - [x] Verify both local MLX weight directories report 4/8 quantization bits
+  - [x] Inspect service: on 2026-11-01 the unqualified hub key resolved to and
+    had loaded 4-bit; selecting an already downloaded 8-bit option via `lms get`
+    did not change its default on 2026-11-02
+  - [x] Add local single-base definitions `archivist/qwen35-4bit` and
+    `archivist/qwen35-8bit`; verify service quantization metadata and reasoning controls
+  - [x] Load and verify `archivist/qwen35-8bit`: 8-bit weights and parallelism 1;
+    requested context 8192 was reported as 50432 (saved local load-profile snapshot)
+  - [x] Complete verified 8-bit control `20261102T104331523050Z` with the fixed
+    8-bit judge; attach before/after loaded-model observations and validate report
+  - [x] Load verified 4-bit/parallel 1 (reported context 92672, requested 8192)
+    and prepare `20261102T105018572021Z`; dataset and non-model parameters match
+    the 8-bit control, with the preflight model observation attached
+  - [x] Generate all twelve 4-bit answers and verify unchanged snapshots and
+    post-generation 4-bit/parallel 1/context 92672
+  - [x] Rerun both verified aliases with a fixed verified judge, parallelism 1,
+    matching requested context and recorded actual load profiles. Treat differences
+    as practical runtime observations when MLX auto-fit prevents equal effective context.
+
+- [x] Document evaluation commands, artifacts, model provenance, and comparison limits
+- [x] Final checks: 128 tests, Ruff lint/format, and 12-case dataset validation
 
 **Done when:** one command runs the eval and baseline numbers are recorded.
 
-**Recorded single-run baseline (MLX 8-bit):**
+**Verified quantization comparison (2026-11-02):**
+
+| Metric | MLX 8-bit | MLX 4-bit |
+|--------|-----------|-----------|
+| Candidate model | `archivist/qwen35-8bit` | `archivist/qwen35-4bit` |
+| Run | `20261102T104331523050Z` | `20261102T105018572021Z` |
+| Grading batch | `20261102T104456095520Z` | `20261102T105639547639Z` |
+| Mean source recall (9 answerable cases) | 100% | 100% |
+| Reference matches (same 8-bit judge) | 12/12 | 12/12 |
+| Mean retrieval time | 0.228 s | 0.171 s |
+| Mean generation time | 5.187 s | 3.788 s |
+| Requested context / parallelism | 8192 / 1 | 8192 / 1 |
+| Observed candidate context / parallelism | 50432 / 1 | 92672 / 1 |
+
+Both use the same dataset fingerprints, non-model generation/retrieval parameters,
+and `reference-v1` rubric. Both saved reports pass offline provenance/snapshot
+validation. Loaded-model observations confirm each candidate's quantization;
+`judge-models-before.json` in the 4-bit run confirms the fixed 8-bit judge at
+context 50432 and parallelism 1. Artifacts remain in local `storage/eval-runs/`.
+
+The 4-bit run's mean generation time was about 27.0% lower in this experiment.
+These are single runs without controlled warm-up; MLX auto-fit produced different
+effective contexts. Treat timing differences as practical runtime observations,
+not a quantization-only causal estimate. Matching judge verdicts on twelve cases
+do not establish general quality equivalence or citation accuracy. Earlier
+unqualified-model runs below remain historical observations with unverified
+quantization.
+
+**Recorded single-run results (quantization not independently verified):**
 
 Answer run: `20261028T214751612403Z`; grading batch: `20261101T204407833512Z`.
 Artifacts live under local `storage/eval-runs/`. The offline report validates their
 association before calculating metrics.
 
 Chat: `qwen/qwen3.5-9b`, user-labeled MLX 8-bit, temperature 0.2, thinking off.
+The unqualified hub key is not a quantization pin: on 2026-11-01 its selected
+and currently loaded variant was verified as 4-bit. Historical manifests preserve
+the supplied 8-bit label, but do not prove which weights served those earlier
+requests. Do not use these runs as a verified 8-bit control or relabel them as
+4-bit without historical evidence; rerun both variants with verified selection.
 Embeddings: `text-embedding-qwen3-embedding-0.6b`. Chunk size/overlap: 1000/200;
 retrieval k=4 with no distance threshold. Judge: the same model/variant at
 temperature 0, thinking off, using rubric `reference-v1`.
@@ -205,8 +259,8 @@ request overhead. Reference matching is a local-model judgment, not independentl
 verified factual accuracy, and citation accuracy is not automatically scored.
 The three unanswerable cases are excluded from source recall but included in
 reference grading. Report module/tests and one-command execution are verified;
-unified-entry regression tests also pass. The 4-bit comparison and documentation
-closeout remain pending. M2 is still in progress.
+unified-entry regression tests also pass. The verified 4-bit/8-bit comparison is complete; documentation
+closeout is complete. M2 is done with 128 offline tests passing.
 
 **Unified-command confirmation run:** `20261101T223119480432Z`, grading batch
 `20261101T223350953139Z`, with the same recorded data fingerprints, 8-bit model
@@ -319,6 +373,76 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-02** — Close M2 after verified model comparison and documentation
+  review. README now documents unified/staged evaluation, saved artifacts,
+  offline reporting, local alias setup requirements, and metric limitations.
+  AGENTS records the evaluation module/script boundary and avoids assuming an
+  unqualified model name pins 8-bit weights. Final checks: 128 tests passing,
+  Ruff lint and format checks passing, and all twelve evaluation cases valid.
+
+- **2026-11-02** — Completed the verified 4-bit/8-bit comparison using the same
+  8-bit reference judge. Validated and saved the 4-bit run report with grading
+  batch `20261102T105639547639Z`: 12/12 matches and 100% mean source recall over
+  nine answerable cases. Recorded 3.788 s versus 5.187 s mean generation time,
+  differing observed contexts, and single-run/judge limitations. Documentation
+  closeout remains before M2 completion.
+
+- **2026-11-02** — Verified all twelve answers in 4-bit candidate run
+  `20261102T105018572021Z`: IDs/questions and snapshot hashes match. Attached
+  post-generation model observation confirming 4-bit/parallel 1/context 92672.
+  Mean source recall is 100% over nine answerable cases; observed mean retrieval
+  and generation times are 0.171/3.788 s. Reference quality has not yet been graded
+  for this run; next switch to the same verified 8-bit judge used for the control.
+
+- **2026-11-02** — Verified `archivist/qwen35-4bit` is loaded at 4-bit/parallel 1
+  after unloading the 8-bit model. MLX reports context 92672 despite the same 8192
+  request, versus 50432 for the 8-bit control. Prepared isolated run
+  `20261102T105018572021Z` (six documents/chunks, twelve cases), attached its
+  original preflight observation, and confirmed identical dataset fingerprints
+  and parameters except candidate model/variant. Answer generation is pending;
+  grade later with the same verified 8-bit judge, using sequential model residency.
+
+- **2026-11-02** — Completed verified 8-bit control run `20261102T104331523050Z`
+  using `archivist/qwen35-8bit` for both candidate and judge. Recomputed report
+  matches: source recall 100%, reference matches 12/12, mean retrieval 0.228 s,
+  mean generation 5.187 s. Input fingerprints are unchanged. Attached original
+  preflight and post-run model observations confirming 8-bit/parallel 1/context
+  50432; requested context was 8192. The 4-bit candidate and fixed 8-bit judge
+  comparison remains pending; avoid simultaneous large-model residency when
+  collecting the next run's timings.
+
+- **2026-11-02** — Verified the explicitly loaded 8-bit alias and parallelism 1.
+  The request specified context 8192 but `lms ps` reports 50432. Original copied
+  model definitions contain no load-time context override. This is consistent
+  with upstream MLX auto-fit issues #366/#2318, though the precise local cause
+  has not been independently isolated. Saved the observed load profile under
+  local `storage/model-profiles/`. Continue the same-dataset application comparison
+  with requested and actual context recorded; do not claim a strictly controlled
+  quantization-only timing effect when actual contexts differ. No runtime update
+  or new model load was performed during this check.
+
+- **2026-11-02** — Confirmed `lms get --select` did not switch the unqualified
+  model's selected variant; no models were loaded at inspection time. The native
+  load API also rejected the full indexed variant key. Added two new local model
+  definitions under `~/.lmstudio/hub/models/archivist/`, each binding exactly one
+  existing MLX weight repo, with original operation/customFields preserved.
+  `lms ls` and the native models API identify `archivist/qwen35-4bit` as 4-bit and
+  `archivist/qwen35-8bit` as 8-bit, both retaining reasoning off/on capability.
+  No weight files were copied/downloaded or original definitions changed. The
+  8-bit alias resolves in CLI estimation at context 8192/parallel 1 (13.63 GiB,
+  low-confidence estimate); actual loading verification and comparison runs remain
+  pending. Keep the local definition files for reproducing these API model IDs.
+
+- **2026-11-01** — Audited installed weights and live model identity before the
+  quantization comparison. Both Qwen3.5-9B MLX builds are present on the accessible
+  external SSD; their config files report 4/8 bits. `lms ls --variants --json`
+  and `lms ps --json` show the unqualified hub key currently selects/loads 4-bit.
+  Earlier runs used that unqualified key plus hand-entered 8-bit labels, so their
+  historical quantization is unverified; artifacts are retained unchanged.
+  The installed CLI also rejected an @8bit key in a non-loading estimate command,
+  matching upstream lms issue #588. Verified variant selection and fresh comparison
+  runs are required. No models were downloaded, loaded, or unloaded during this audit.
 
 - **2026-11-01** — Added two offline unified-entry tests with real temporary
   Chroma and fake models. Verified distinct candidate/judge IDs and temperatures,
