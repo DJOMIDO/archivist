@@ -158,3 +158,34 @@ def test_load_documents_from_directory_with_docx(tmp_path: Path, suffix: str):
         "source": str(docx_path.resolve()),
         "file_type": "docx",
     }
+
+
+@pytest.mark.parametrize("suffix", [".html", ".htm", ".HTML", ".HTM"])
+def test_load_documents_from_directory_with_html(tmp_path: Path, suffix: str):
+    text_path = tmp_path / "note.md"
+    text_path.write_text("Text note", encoding="utf-8")
+    subdirectory = tmp_path / "sub"
+    subdirectory.mkdir()
+    html_path = subdirectory / f"sample{suffix}"
+    html_path.write_text(
+        "<html><body>"
+        "<nav>Navigation</nav>"
+        "<main><p>HTML content</p></main>"
+        "</body></html>",
+        encoding="utf-8",
+    )
+
+    assert set(find_files(tmp_path)) == {text_path, html_path}
+
+    documents = load_documents(tmp_path)
+
+    assert len(documents) == 2
+    by_source = {document.metadata["source"]: document for document in documents}
+    assert by_source[str(text_path.resolve())].page_content == "Text note"
+
+    html_document = by_source[str(html_path.resolve())]
+    assert html_document.page_content == "HTML content"
+    assert html_document.metadata == {
+        "source": str(html_path.resolve()),
+        "file_type": "html",
+    }

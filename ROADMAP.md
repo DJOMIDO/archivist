@@ -306,7 +306,12 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Test text/metadata, empty content, and missing/corrupt files
   - [x] Register DOCX discovery and verify mixed-format loading
   - [x] Smoke-test real DOCX ingestion and grounded answers with source citations
-- [ ] HTML loader (strip boilerplate)
+- [x] HTML loader (strip boilerplate)
+  - [x] Verify a standalone Beautiful Soup prototype on a controlled UTF-8 HTML file
+  - [x] Extract `load_html` and verify unchanged smoke output
+  - [x] Test cleanup/metadata, bodyless fragments, empty content, and missing files
+  - [x] Register `.html`/`.htm` discovery and verify mixed-format loading
+  - [x] Smoke-test HTML ingestion and grounded answers with source citations
 - [ ] EPUB loader (chapter/section metadata)
   - [ ] Include section identity in chunk IDs
 - [ ] Metadata: `file_type`, `page`/`section`, `ingested_at`, `content_hash`
@@ -392,6 +397,34 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-02** — The owner verified an HTML end-to-end answer through the
+  CLI: backups are retained for 14 days, matching the controlled sample body,
+  with the correct `sample.html` source path and no inferred page number.
+  This confirms one smoke example, not general webpage extraction accuracy.
+
+- **2026-11-02** — The owner reports passing HTML/HTM registration checks,
+  including mixed-format recursive loading for lowercase/uppercase suffixes
+  and the public-entry smoke script (159 expected tests). Real-model HTML
+  question answering remains pending; cleanup remains a tag-based heuristic.
+
+- **2026-11-02** — Verified HTML cleanup/metadata, bodyless fragments, empty
+  input, empty body with a non-empty title, and missing-file errors. All 155
+  offline tests pass. HTML/HTM registration and mixed-format loading are next.
+
+- **2026-11-02** — Extracted `load_html`; the owner reports the smoke step
+  passed. The 150 existing offline tests still pass. Next lesson adds isolated
+  cleanup/metadata and fragment/empty/error tests before HTML registration.
+
+- **2026-11-02** — The owner verified the controlled UTF-8 HTML prototype:
+  retained heading, English/Chinese paragraphs, and decoded ampersand; excluded
+  navigation, script/style content, and footer. Lint/format checks pass.
+  Module extraction and regression tests remain pending.
+
+- **2026-11-02** — Start HTML ingestion with a standalone Beautiful Soup
+  prototype using the standard-library `html.parser`. First verify explicit
+  script/style/navigation/footer removal and text extraction on controlled
+  UTF-8 input; this heuristic is not general article extraction or rendering.
 
 - **2026-11-02** — The owner verified a real-model DOCX answer through the CLI:
   `sample.docx` contains 18 chapters of lorem ipsum, matching the extracted
