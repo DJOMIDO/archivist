@@ -300,7 +300,12 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Add tests for page text, metadata, empty pages, and missing files
   - [x] Include page identity in chunk IDs to avoid cross-page collisions
   - [x] Register PDF discovery and verify mixed-format recursive loading
-- [ ] DOCX loader
+- [x] DOCX loader
+  - [x] Verify a standalone docx2txt prototype returning one Document per file
+  - [x] Extract `load_docx` and verify unchanged smoke output
+  - [x] Test text/metadata, empty content, and missing/corrupt files
+  - [x] Register DOCX discovery and verify mixed-format loading
+  - [x] Smoke-test real DOCX ingestion and grounded answers with source citations
 - [ ] HTML loader (strip boilerplate)
 - [ ] EPUB loader (chapter/section metadata)
   - [ ] Include section identity in chunk IDs
@@ -387,6 +392,36 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-02** — The owner verified a real-model DOCX answer through the CLI:
+  `sample.docx` contains 18 chapters of lorem ipsum, matching the extracted
+  introduction, with the correct source path and no inferred page number.
+  This confirms one end-to-end example, not full-document extraction fidelity
+  or general answer/citation accuracy.
+
+- **2026-11-02** — Registered DOCX loading and verified recursive mixed-format
+  discovery for lowercase/uppercase suffixes. The owner reports 150 tests and
+  lint/format checks passing, with unchanged real `sample.docx` smoke output
+  through `load_documents`. Real-model DOCX question answering remains pending.
+
+- **2026-11-02** — Verified DOCX text/metadata and empty-body extraction using
+  minimal ZIP/XML parser inputs, plus missing-file and corrupt-container errors.
+  All 148 offline tests pass. Registration and recursive mixed-format loading
+  remain pending; these tests do not establish general Word-format fidelity.
+
+- **2026-11-02** — Extracted `load_docx`; the owner confirms unchanged text
+  preview and metadata on the real sample after the refactor. Next lesson adds
+  isolated parser/error tests before DOCX discovery is enabled.
+
+- **2026-11-02** — Verified the DOCX standalone prototype with docx2txt 0.9
+  on `sample.docx`: one Document with source/type metadata and a text preview.
+  The owner reports passing lint/format checks. Full-document extraction
+  fidelity is not established by the preview; module extraction/tests follow.
+
+- **2026-11-02** — Start the DOCX lesson with docx2txt for plain-text
+  extraction, returning one Document per file with source/type metadata.
+  This loader will not infer page numbers from extracted text; standalone
+  verification precedes module extraction, tests, and registration.
 
 - **2026-11-02** — The owner verified two real-model PDF answers through the
   CLI: the 30-minute lab duration cites `lt3-lab1.pdf` page 3, and the GoTravel

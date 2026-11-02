@@ -1,4 +1,5 @@
 from pathlib import Path
+from zipfile import ZipFile
 
 import pytest
 from langchain_core.documents import Document
@@ -124,3 +125,36 @@ def test_load_documents_from_mixed_directory(tmp_path: Path, suffix: str):
         }
         for page_number in (1, 2)
     ]
+
+
+@pytest.mark.parametrize("suffix", [".docx", ".DOCX"])
+def test_load_documents_from_directory_with_docx(tmp_path: Path, suffix: str):
+    text_path = tmp_path / "note.md"
+    text_path.write_text("Text note", encoding="utf-8")
+    subdirectory = tmp_path / "sub"
+    subdirectory.mkdir()
+    docx_path = subdirectory / f"sample{suffix}"
+
+    xml = (
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/'
+        'wordprocessingml/2006/main">'
+        "<w:body><w:p><w:r><w:t>DOCX content</w:t></w:r></w:p>"
+        "</w:body></w:document>"
+    )
+    with ZipFile(docx_path, "w") as archive:
+        archive.writestr("word/document.xml", xml)
+
+    assert set(find_files(tmp_path)) == {text_path, docx_path}
+
+    documents = load_documents(tmp_path)
+
+    assert len(documents) == 2
+    by_source = {document.metadata["source"]: document for document in documents}
+    assert by_source[str(text_path.resolve())].page_content == "Text note"
+
+    docx_document = by_source[str(docx_path.resolve())]
+    assert docx_document.page_content == "DOCX content"
+    assert docx_document.metadata == {
+        "source": str(docx_path.resolve()),
+        "file_type": "docx",
+    }
