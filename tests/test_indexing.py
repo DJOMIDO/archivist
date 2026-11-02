@@ -5,6 +5,7 @@ from langchain_core.embeddings import DeterministicFakeEmbedding
 from pydantic import SecretStr
 
 from archivist.indexing import chunk_id, get_embeddings, get_vector_store, index_chunks
+from archivist.splitting import split_documents
 
 
 def make_chunk(text: str, start: int) -> Document:
@@ -49,3 +50,34 @@ def test_embeddings_factory_sends_raw_text():
     )
 
     assert embeddings.check_embedding_ctx_length is False
+
+
+def test_chunk_id_includes_page():
+    chunk = Document(
+        page_content="Hello",
+        metadata={"source": "/notes/a.pdf", "page": 2, "start_index": 0},
+    )
+
+    assert chunk_id(chunk) == "/notes/a.pdf:page=2:0"
+
+
+def test_indexing_preserves_pages_with_same_start_index(tmp_path: Path):
+    pages = [
+        Document(
+            page_content=text,
+            metadata={"source": "/notes/a.pdf", "page": page_number},
+        )
+        for page_number, text in enumerate(["First page", "Second page"], start=1)
+    ]
+    chunks = split_documents(pages, chunk_size=100, chunk_overlap=0)
+    store = get_vector_store(DeterministicFakeEmbedding(size=16), tmp_path)
+
+    assert [chunk.metadata["start_index"] for chunk in chunks] == [0, 0]
+
+    index_chunks(store, chunks)
+    index_chunks(store, chunks)
+
+    stored = store.get()
+    assert len(stored["ids"]) == 2
+    assert set(stored["documents"]) == {"First page", "Second page"}
+    assert {metadata["page"] for metadata in stored["metadatas"]} == {1, 2}

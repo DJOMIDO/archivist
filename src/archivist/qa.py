@@ -1,7 +1,7 @@
 """Answer questions from retrieved chunks, citing only the sources actually used."""
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from langchain_core.documents import Document
@@ -36,10 +36,19 @@ PROMPT = ChatPromptTemplate.from_messages(
 CITATION = re.compile(r"\[(\d+)\]")
 
 
+@dataclass(frozen=True)
+class Citation:
+    """A cited source location with an optional 1-based page number."""
+
+    source: str
+    page: int | None = None
+
+
 @dataclass
 class Answer:
     text: str
     sources: list[str]
+    references: list[Citation] = field(default_factory=list)
 
 
 def get_chat_model(
@@ -65,11 +74,17 @@ def get_chat_model(
 
 
 def format_context(chunks: list[Document]) -> str:
-    """Number each chunk so the model can cite it as [1], [2], ..."""
-    return "\n\n".join(
-        f"[{i}] (from {Path(chunk.metadata['source']).name})\n{chunk.page_content}"
-        for i, chunk in enumerate(chunks, start=1)
-    )
+    """Number context passages and include page numbers when available."""
+    passages: list[str] = []
+    for index, chunk in enumerate(chunks, start=1):
+        source = Path(chunk.metadata["source"]).name
+        page = chunk.metadata.get("page")
+        if page is not None:
+            source = f"{source}, page {page}"
+
+        passages.append(f"[{index}] (from {source})\n{chunk.page_content}")
+
+    return "\n\n".join(passages)
 
 
 def cited_sources(text: str, chunks: list[Document]) -> list[str]:
@@ -82,6 +97,22 @@ def cited_sources(text: str, chunks: list[Document]) -> list[str]:
             if source not in sources:
                 sources.append(source)
     return sources
+
+
+def cited_references(text: str, chunks: list[Document]) -> list[Citation]:
+    """Return unique source/page references in citation appearance order."""
+    references: list[Citation] = []
+    for match in CITATION.finditer(text):
+        index = int(match.group(1))
+        if 1 <= index <= len(chunks):
+            metadata = chunks[index - 1].metadata
+            reference = Citation(
+                source=metadata["source"],
+                page=metadata.get("page"),
+            )
+            if reference not in references:
+                references.append(reference)
+    return references
 
 
 def not_found_message(question: str) -> str:
@@ -100,4 +131,8 @@ def answer_question(
     text = chain.invoke(
         {"context": format_context(chunks), "question": question}
     ).strip()
-    return Answer(text=text, sources=cited_sources(text, chunks))
+    return Answer(
+        text=text,
+        sources=cited_sources(text, chunks),
+        references=cited_references(text, chunks),
+    )

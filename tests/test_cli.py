@@ -1,6 +1,7 @@
 import httpx
 import pytest
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from langchain_core.language_models import FakeListChatModel
 from openai import APIConnectionError
@@ -67,3 +68,21 @@ def test_unreachable_model_server_gives_short_error(monkeypatch, fake_backends):
     assert result.exit_code == 1
     assert "cannot reach the model server" in result.output
     assert "Traceback" not in result.output
+
+
+def test_ask_displays_pdf_page(fake_backends):
+    fake_backends.add_documents(
+        [
+            Document(
+                page_content="Redis is in memory.",
+                metadata={"source": "/notes/lab.pdf", "page": 7},
+            )
+        ],
+        ids=["pdf-page-7"],
+    )
+
+    result = runner.invoke(app, ["ask", "Redis is in memory.", "--top-k", "1"])
+
+    assert result.exit_code == 0
+    assert "Redis keeps data in memory [1]." in result.output
+    assert "Sources:\n  - /notes/lab.pdf, page 7" in result.output

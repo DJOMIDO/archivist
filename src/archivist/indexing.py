@@ -32,8 +32,14 @@ def get_vector_store(embeddings: Embeddings, persist_dir: Path) -> Chroma:
 
 
 def chunk_id(chunk: Document) -> str:
-    """Stable ID for a chunk: the same file position always maps to the same ID."""
-    return f"{chunk.metadata['source']}:{chunk.metadata['start_index']}"
+    """Build a stable ID from source, optional page, and text position."""
+    source = chunk.metadata["source"]
+    start = chunk.metadata["start_index"]
+    page = chunk.metadata.get("page")
+
+    if page is not None:
+        return f"{source}:page={page}:{start}"
+    return f"{source}:{start}"
 
 
 def index_chunks(vector_store: Chroma, chunks: list[Document]) -> int:

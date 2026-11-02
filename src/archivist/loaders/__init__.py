@@ -5,6 +5,7 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 
+from archivist.loaders.pdf import load_pdf
 from archivist.loaders.text import load_text
 
 Loader = Callable[[Path], list[Document]]
@@ -12,6 +13,7 @@ Loader = Callable[[Path], list[Document]]
 LOADERS: dict[str, Loader] = {
     ".md": load_text,
     ".txt": load_text,
+    ".pdf": load_pdf,
 }
 
 SUPPORTED_SUFFIXES = set(LOADERS)

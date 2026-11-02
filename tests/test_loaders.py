@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from langchain_core.documents import Document
+from pypdf import PdfWriter
 
 from archivist.loaders import LOADERS, find_files, load_documents, load_file
 
@@ -87,3 +88,39 @@ def test_load_documents_flattens_loader_results(
     documents = load_documents(tmp_path)
 
     assert documents == expected
+
+
+@pytest.mark.parametrize("suffix", [".pdf", ".PDF"])
+def test_load_documents_from_mixed_directory(tmp_path: Path, suffix: str):
+    text_path = tmp_path / "note.md"
+    text_path.write_text("Hello", encoding="utf-8")
+    subdirectory = tmp_path / "sub"
+    subdirectory.mkdir()
+    pdf_path = subdirectory / f"sample{suffix}"
+
+    with PdfWriter() as writer:
+        writer.add_blank_page(width=200, height=200)
+        writer.add_blank_page(width=200, height=200)
+        writer.write(pdf_path)
+
+    assert set(find_files(tmp_path)) == {text_path, pdf_path}
+
+    documents = load_documents(tmp_path)
+
+    assert len(documents) == 3
+    text_documents = [
+        document for document in documents if document.metadata["file_type"] == "md"
+    ]
+    pdf_documents = [
+        document for document in documents if document.metadata["file_type"] == "pdf"
+    ]
+    assert len(text_documents) == 1
+    assert text_documents[0].page_content == "Hello"
+    assert [document.metadata for document in pdf_documents] == [
+        {
+            "source": str(pdf_path.resolve()),
+            "file_type": "pdf",
+            "page": page_number,
+        }
+        for page_number in (1, 2)
+    ]

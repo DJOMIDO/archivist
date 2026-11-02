@@ -3,7 +3,9 @@ from langchain_core.language_models import FakeListChatModel
 from pydantic import SecretStr
 
 from archivist.qa import (
+    Citation,
     answer_question,
+    cited_references,
     cited_sources,
     format_context,
     get_chat_model,
@@ -54,6 +56,7 @@ def test_not_found_answer_has_no_sources():
     answer = answer_question("What's the weather?", CHUNKS, llm)
 
     assert answer.sources == []
+    assert answer.references == []
 
 
 def test_no_chunks_skips_the_model():
@@ -63,6 +66,7 @@ def test_no_chunks_skips_the_model():
 
     assert answer.text == "你的文档里没有找到相关内容。"
     assert answer.sources == []
+    assert answer.references == []
 
 
 def test_not_found_message_follows_question_language():
@@ -80,3 +84,68 @@ def test_chat_model_factory_turns_thinking_off():
 
     assert llm.reasoning_effort == "none"
     assert llm.temperature == 0.2
+
+
+def test_format_context_distinguishes_passage_numbers_from_pdf_pages():
+    chunks = [
+        Document(
+            page_content="First passage",
+            metadata={"source": "/notes/lab.pdf", "page": 7},
+        ),
+        Document(
+            page_content="Second passage",
+            metadata={"source": "/notes/lab.pdf", "page": 12},
+        ),
+        make_chunk("Text note", "/notes/note.md"),
+    ]
+
+    context = format_context(chunks)
+
+    assert context == (
+        "[1] (from lab.pdf, page 7)\nFirst passage\n\n"
+        "[2] (from lab.pdf, page 12)\nSecond passage\n\n"
+        "[3] (from note.md)\nText note"
+    )
+    assert chunks[0].metadata["source"] == "/notes/lab.pdf"
+
+
+def test_cited_references_preserves_order_and_distinct_pages():
+    chunks = [
+        Document(
+            page_content=f"Passage {index}",
+            metadata={"source": "/notes/lab.pdf", "page": page},
+        )
+        for index, page in enumerate([7, 12, 7], start=1)
+    ]
+    chunks.append(make_chunk("Text note", "/notes/note.md"))
+
+    references = cited_references("[2][1][3][4][0][99]", chunks)
+
+    assert references == [
+        Citation(source="/notes/lab.pdf", page=12),
+        Citation(source="/notes/lab.pdf", page=7),
+        Citation(source="/notes/note.md"),
+    ]
+
+
+def test_cited_references_without_citations_is_empty():
+    assert cited_references("Not found.", CHUNKS) == []
+
+
+def test_answer_preserves_paths_and_page_references():
+    chunks = [
+        Document(
+            page_content=f"Content on page {page}",
+            metadata={"source": "/notes/lab.pdf", "page": page},
+        )
+        for page in (7, 12)
+    ]
+    llm = FakeListChatModel(responses=["Two facts [2][1]."])
+
+    answer = answer_question("What are the facts?", chunks, llm)
+
+    assert answer.sources == ["/notes/lab.pdf"]
+    assert answer.references == [
+        Citation(source="/notes/lab.pdf", page=12),
+        Citation(source="/notes/lab.pdf", page=7),
+    ]

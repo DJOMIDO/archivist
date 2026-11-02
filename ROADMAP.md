@@ -290,19 +290,28 @@ recorded baseline above. Its reviews remain separate from the newer run.
 **Goal:** ingest all target formats with rich metadata and incremental indexing.
 **Learning focus:** document loaders, metadata design, idempotent pipelines.
 
-- [ ] Loader registry keyed by file extension
+- [x] Loader registry keyed by file extension
   - [x] Verify a standalone MD/TXT dispatch prototype returning `list[Document]`
   - [x] Refactor loaders into a package and preserve existing imports (128 existing tests pass)
-  - [ ] Add offline tests for dispatch, unsupported extensions, and multi-Document flattening
-- [ ] PDF loader (page numbers in metadata)
-  - [ ] Include page/section identity in chunk IDs to avoid cross-page collisions
+  - [x] Add offline tests for dispatch, unsupported extensions, and multi-Document flattening
+- [x] PDF loader (page numbers in metadata)
+  - [x] Verify a standalone pypdf text-extraction prototype on a multi-page PDF
+  - [x] Extract `load_pdf` and verify unchanged real-PDF smoke output
+  - [x] Add tests for page text, metadata, empty pages, and missing files
+  - [x] Include page identity in chunk IDs to avoid cross-page collisions
+  - [x] Register PDF discovery and verify mixed-format recursive loading
 - [ ] DOCX loader
 - [ ] HTML loader (strip boilerplate)
 - [ ] EPUB loader (chapter/section metadata)
+  - [ ] Include section identity in chunk IDs
 - [ ] Metadata: `file_type`, `page`/`section`, `ingested_at`, `content_hash`
 - [ ] Document registry + content-hash dedup; replace chunks of changed files
 - [ ] CLI: `archivist list`, `archivist remove <source>`
 - [ ] Include page/section in answer context and displayed citations
+  - [x] Include PDF page numbers in numbered answer context
+  - [x] Map passage references to unique source/page records in citation order
+  - [x] Preserve source paths separately from page-aware citation display
+  - [x] Smoke-test real PDF ingestion and verify answer citations against PDF pages
 - [ ] Re-run M2 eval
 
 **Done when:** a mixed-format folder ingests cleanly, re-ingesting is a no-op, and citations show page/section.
@@ -378,6 +387,57 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-02** — The owner verified two real-model PDF answers through the
+  CLI: the 30-minute lab duration cites `lt3-lab1.pdf` page 3, and the GoTravel
+  support challenges cite page 4. Both answers agree with the inspected source
+  text and display the supporting PDF page. This confirms two end-to-end smoke
+  examples, not general PDF extraction, retrieval, or citation accuracy.
+
+- **2026-11-02** — Verified Answer/CLI integration of structured references;
+  source paths remain unchanged for evaluation while CLI displays PDF pages.
+  All 144 offline tests pass. Real-model PDF ingestion, grounded answers, and
+  page-citation inspection remain pending.
+
+- **2026-11-02** — Verified structured Citation mapping with source/page
+  deduplication, first-appearance ordering, plain-text references, and invalid
+  passage-number filtering. All 142 offline tests pass. Answer/CLI integration
+  is next, preserving raw source paths for existing evaluation consumers.
+
+- **2026-11-02** — Verified PDF page numbers in numbered answer context while
+  preserving plain-text context formatting; all 140 offline tests pass.
+  Next: structured source/page citation mapping before Answer/CLI integration;
+  evaluation must continue receiving unformatted source paths.
+
+- **2026-11-02** — Registered PDF loading and verified recursive mixed-format
+  discovery with lowercase/uppercase PDF suffixes. The owner reports 139 tests
+  passing and unchanged 26/25-page real-PDF smoke output through the public
+  loading entry point. Next: page-aware answer context, then citation display
+  that preserves source paths used by evaluation.
+
+- **2026-11-02** — Verified page-aware chunk IDs while preserving existing
+  MD/TXT IDs. All 137 offline tests pass, including repeated real Chroma upserts
+  that retain two pages with the same start index. PDF registration/mixed-format
+  discovery is next; section-aware IDs remain part of EPUB integration.
+
+- **2026-11-02** — Verified all 135 offline tests, including PDF text/metadata
+  mapping, real blank-page preservation, and missing-file errors. Page-aware
+  chunk identity is the next lesson before enabling PDF discovery.
+
+- **2026-11-02** — Extracted `load_pdf` with explicit binary-file lifetime and
+  preserved per-page source/type/1-based page metadata. The owner confirms
+  unchanged smoke output for both real PDFs and passing lint/format checks.
+  PDF test coverage and page-aware indexing remain pending.
+
+- **2026-11-02** — Selected pypdf 6.21.4 for PDF text extraction. The owner
+  ran the standalone prototype on two real PDFs (26 and 25 pages), reporting
+  per-file page counts and extracted text/source/type/1-based page metadata
+  for the first two pages. Full-document extraction quality is not yet assessed.
+  Loader extraction, tests, and page-aware chunk IDs remain pending.
+
+- **2026-11-02** — Verified registry dispatch, uppercase extensions, unsupported
+  extension rejection, and multi-Document flattening; all 132 offline tests pass.
+  Next lesson starts standalone PDF extraction with pypdf before integration.
 
 - **2026-11-02** — Extracted plain-text loading into `loaders/text.py` and
   extension dispatch into `loaders/__init__.py`, preserving public import paths.
