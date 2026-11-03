@@ -320,8 +320,21 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Register EPUB discovery and verify mixed-format loading
   - [x] Smoke-test real EPUB ingestion and grounded answers with section citations
   - [x] Include section identity in chunk IDs
-- [ ] Metadata: `file_type`, `page`/`section`, `ingested_at`, `content_hash`
+- [x] Metadata: `file_type`, `page`/`section`, `ingested_at`, `content_hash`
+  - [x] Verify standalone streaming SHA-256 fingerprints of raw file bytes
+  - [x] Extract `hash_file` into `metadata.py` and verify unchanged smoke output
+  - [x] Test known digests, content changes, path independence, binary bytes, and errors
+  - [x] Verify standalone UTC ISO 8601 ingestion timestamp construction
+  - [x] Extract immutable `FileMetadata` and explicit-time `build_file_metadata`
+  - [x] Test metadata fields, UTC normalization, timezone rejection, and hash/time independence
+  - [x] Verify standalone file-metadata merging and propagation through splitting
+  - [x] Extract `attach_file_metadata`, preserving Document fields and validating source identity
+  - [x] Test page/section propagation, Document ID preservation, copy isolation, and source rejection
+  - [x] Integrate file metadata into ingestion with an explicit timestamp
+  - [x] Add pipeline regression coverage for metadata read through a reopened Chroma instance
 - [ ] Document registry + content-hash dedup; replace chunks of changed files
+  - [ ] Verify a standalone SQLite registry prototype keyed by canonical source path
+  - [ ] Extract registry storage, test persistence, and integrate successful-ingestion records
 - [ ] CLI: `archivist list`, `archivist remove <source>`
 - [x] Include page/section in answer context and displayed citations
   - [x] Preserve EPUB section identity in context, Citation records, and CLI display
@@ -404,6 +417,74 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-03** — Verified all 184 offline tests, including reopened-Chroma
+  metadata checks for multiple files/chunks and per-chunk source/hash/text
+  position associations. File metadata support is complete for this scope.
+  Start the registry prototype with standard-library sqlite3, keyed by source;
+  prototype records are separate from production indexing. Skip/replacement,
+  configuration compatibility, and Chroma/registry recovery remain pending.
+
+- **2026-11-03** — Integrated per-file metadata into pipeline.ingest and
+  updated CLI/evaluation preparation/direct tests to supply explicit time.
+  All 183 offline tests pass. Next: regression coverage checking multiple
+  files/chunks, persisted per-file hashes/time, and source text positions via
+  a reopened Chroma instance; unchanged-file skipping remains unimplemented.
+
+- **2026-11-03** — Verified all 183 offline tests, including attachment field
+  preservation through splitting, independent top-level metadata dictionaries,
+  and rejected missing/mismatched sources. Next lesson integrates per-file
+  metadata into pipeline.ingest with an explicit caller-supplied timestamp;
+  CLI, evaluation preparation, and direct pipeline tests must supply it.
+
+- **2026-11-03** — The owner verified extracted attachment on the two-page
+  PDF smoke sample with unchanged 122-chunk output. All 178 existing offline
+  tests pass. Next lesson adds attachment/splitting, copy-isolation, and source
+  identity tests; production ingestion still does not attach file metadata.
+
+- **2026-11-03** — The owner verified the two-page PDF metadata prototype:
+  122 chunks retain page/type, shared file hash/time, and start indices without
+  mutating original Document metadata. Next: extract a copy-based attachment
+  helper preserving Document IDs and rejecting mismatched source identity.
+  Formal ingestion integration remains pending.
+
+- **2026-11-03** — Verified all 178 offline tests, including deterministic
+  FileMetadata builder fields, UTC normalization, timezone rejection, and
+  hash/time independence. Next lesson previews shared file metadata merged
+  with existing page metadata on copied Documents before splitting; no
+  ingestion-pipeline or persistent-index behavior has changed yet.
+
+- **2026-11-03** — The owner verified the FileMetadata builder smoke output
+  and all six existing hash tests after extraction. Next lesson adds fixed-time
+  builder tests for complete field mapping, UTC normalization, rejected naive
+  datetime input, and content hashes independent of ingestion timestamps.
+
+- **2026-11-03** — The owner verified repeated metadata previews retain the
+  same content hash while UTC timestamps differ. Next lesson extracts an
+  immutable FileMetadata record and a builder receiving an explicit aware
+  datetime, normalizing to UTC and rejecting timestamps without a timezone.
+  Metadata propagation and persistence remain pending.
+
+- **2026-11-03** — Verified all 174 offline tests, including six file-hash
+  cases. Next lesson constructs a timezone-aware UTC ISO 8601 timestamp in the
+  metadata smoke script. This is a metadata preview, not a completed ingestion
+  record; pipeline propagation and successful-index persistence remain pending.
+
+- **2026-11-03** — Extracted `metadata.hash_file`; the owner reports passing
+  smoke verification. The 168 existing offline tests pass. Next lesson adds
+  known SHA-256 vectors, repeated/changed/restored content, path-independent
+  identity, binary/newline sensitivity, and missing-file regression tests.
+
+- **2026-11-03** — The owner verified the SHA-256 prototype output and
+  lint/format checks. Additional temporary-file checks confirm repeated bytes
+  yield the same digest, changed bytes differ, and restored bytes restore the
+  digest. Next: extract `metadata.hash_file` before adding timestamp metadata.
+
+- **2026-11-03** — Begin file-level metadata/incremental-indexing lessons
+  with a standalone raw-byte SHA-256 prototype using `hashlib.file_digest`.
+  Source identity remains separate from content identity. Fingerprint equality
+  alone does not validate embedding/chunking/parser configuration compatibility;
+  unchanged-file skipping and changed-file replacement are not implemented yet.
 
 - **2026-11-03** — The owner verified a real-model EPUB answer naming the two
   Lewis Carroll books in the inspected bibliography, with the correct

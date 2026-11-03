@@ -100,6 +100,7 @@ try:
         store,
         chunk_size=parameters.chunk_size,
         chunk_overlap=parameters.chunk_overlap,
+        ingested_at=datetime.now(UTC),
     )
     if fingerprint_eval_data(cases_path, corpus) != fingerprints:
         raise ValueError("Input snapshot changed during indexing")

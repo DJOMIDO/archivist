@@ -105,7 +105,8 @@ These rules override any default "just write the code" behavior.
 | LLM & embeddings   | Any OpenAI-compatible server via `langchain-openai` (base URL in config); currently LM Studio's headless `llmster` on `localhost:1234` |
 | Default models     | Chat: `qwen/qwen3.5-9b` (Hub-selected MLX variant, tool calling; thinking off via `reasoning_effort="none"`; verify quantization for experiments). Embeddings: `text-embedding-qwen3-embedding-0.6b` (GGUF Q8, 1024-dim, instruction-aware queries). **Changing the embedding model requires rebuilding the index.** |
 | Vector store       | Chroma (local persistent) via `langchain-chroma`                        |
-| Loaders            | pypdf / PyMuPDF (PDF), docx2txt or Unstructured (DOCX), BeautifulSoup (HTML), EPUB loader; plain readers for MD/TXT |
+| Document registry  | SQLite via standard-library `sqlite3` (M3; source path identifies each record) |
+| Loaders            | pypdf (PDF), docx2txt (DOCX), Beautiful Soup with `html.parser` (UTF-8 HTML), EbookLib + Beautiful Soup (EPUB); plain readers for MD/TXT |
 | Configuration      | pydantic-settings (typed settings from env / `.env`)                    |
 | CLI                | Typer                                                                   |
 | Web UI (later)     | Streamlit                                                               |
@@ -134,7 +135,8 @@ operation/customFields; these definitions do not duplicate model weights.
 archivist/
 ├── src/archivist/
 │   ├── config.py        # settings (env, paths, model names, chunk params)
-│   ├── loaders.py       # find + load files as Documents (becomes loaders/ package in M3)
+│   ├── loaders/         # extension registry + text/PDF/DOCX/HTML/EPUB loaders
+│   ├── metadata.py      # file fingerprints and shared ingestion metadata (M3)
 │   ├── splitting.py     # text splitters, metadata preservation
 │   ├── indexing.py      # embedding/vector-store factories, stable chunk IDs (registry in M3)
 │   ├── retrieval.py     # top-k search with distances (MMR / hybrid in M5)

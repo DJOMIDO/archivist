@@ -2,6 +2,7 @@
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -71,6 +72,7 @@ def ingest(
             open_vector_store(settings),
             chunk_size=settings.chunk_size,
             chunk_overlap=settings.chunk_overlap,
+            ingested_at=datetime.now(UTC),
         )
     typer.echo(f"Ingested {result.documents} documents ({result.chunks} chunks).")
 
