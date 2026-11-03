@@ -2,6 +2,8 @@
 
 import argparse
 import json
+import sqlite3
+from contextlib import closing
 from dataclasses import asdict
 from datetime import UTC, datetime
 from importlib.metadata import version
@@ -18,9 +20,12 @@ from archivist.evaluation import (
     fingerprint_eval_data,
     load_eval_cases,
 )
+from archivist.index_profile import INDEX_PACKAGE_NAMES, IndexProfile
 from archivist.indexing import get_embeddings, get_vector_store
 from archivist.loaders import find_files
-from archivist.pipeline import ingest
+from archivist.pipeline import ensure_index_compatible, ingest
+from archivist.registry import initialize_registry
+from archivist.splitting import SEPARATORS
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--chat-variant", required=True)
@@ -38,6 +43,16 @@ parameters = RunParameters(
     chunk_overlap=settings.chunk_overlap,
     k=4,
     max_distance=None,
+)
+
+profile = IndexProfile(
+    embedding_model=parameters.embedding_model,
+    embedding_base_url=settings.llm_base_url,
+    chunk_size=parameters.chunk_size,
+    chunk_overlap=parameters.chunk_overlap,
+    separators=SEPARATORS,
+    python=python_version(),
+    packages={name: version(name) for name in INDEX_PACKAGE_NAMES},
 )
 
 run_id = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
@@ -68,6 +83,7 @@ record = {
         "cases": "inputs/cases.json",
         "corpus": "inputs/corpus",
         "index": "chroma",
+        "registry": "registry.sqlite3",
     },
     "software": {
         "python": python_version(),
@@ -90,18 +106,22 @@ with manifest.open("x", encoding="utf-8") as file:
 
 try:
     embeddings = get_embeddings(
-        parameters.embedding_model,
-        settings.llm_base_url,
+        profile.embedding_model,
+        profile.embedding_base_url,
         settings.llm_api_key,
     )
     store = get_vector_store(embeddings, run_dir / "chroma")
-    result = ingest(
-        corpus,
-        store,
-        chunk_size=parameters.chunk_size,
-        chunk_overlap=parameters.chunk_overlap,
-        ingested_at=datetime.now(UTC),
-    )
+    with closing(sqlite3.connect(run_dir / "registry.sqlite3")) as registry:
+        initialize_registry(registry)
+        ensure_index_compatible(store, registry, profile)
+        result = ingest(
+            corpus,
+            store,
+            chunk_size=profile.chunk_size,
+            chunk_overlap=profile.chunk_overlap,
+            ingested_at=datetime.now(UTC),
+            registry=registry,
+        )
     if fingerprint_eval_data(cases_path, corpus) != fingerprints:
         raise ValueError("Input snapshot changed during indexing")
 

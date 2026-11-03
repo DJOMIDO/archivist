@@ -1,9 +1,12 @@
 """Command-line interface for Archivist."""
 
+import sqlite3
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import UTC, datetime
+from importlib.metadata import version
 from pathlib import Path
+from platform import python_version
 from typing import Annotated
 
 import typer
@@ -13,8 +16,11 @@ from openai import APIConnectionError
 
 from archivist import pipeline
 from archivist.config import Settings, get_settings
+from archivist.index_profile import INDEX_PACKAGE_NAMES, IndexProfile
 from archivist.indexing import get_embeddings, get_vector_store
 from archivist.qa import get_chat_model
+from archivist.registry import initialize_registry
+from archivist.splitting import SEPARATORS
 
 app = typer.Typer(
     help="Archivist: ask questions about your own documents.",
@@ -66,14 +72,38 @@ def ingest(
 ) -> None:
     """Load, split, embed and store documents so they can be searched."""
     settings = get_settings()
-    with model_server_errors(settings):
-        result = pipeline.ingest(
-            path,
-            open_vector_store(settings),
-            chunk_size=settings.chunk_size,
-            chunk_overlap=settings.chunk_overlap,
-            ingested_at=datetime.now(UTC),
-        )
+    profile = IndexProfile(
+        embedding_model=settings.embedding_model,
+        embedding_base_url=settings.llm_base_url,
+        chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
+        separators=SEPARATORS,
+        python=python_version(),
+        packages={name: version(name) for name in INDEX_PACKAGE_NAMES},
+    )
+    settings.storage_dir.mkdir(parents=True, exist_ok=True)
+
+    with closing(
+        sqlite3.connect(settings.storage_dir / "registry.sqlite3")
+    ) as registry:
+        initialize_registry(registry)
+        with model_server_errors(settings):
+            store = open_vector_store(settings)
+            try:
+                pipeline.ensure_index_compatible(store, registry, profile)
+            except ValueError as error:
+                typer.echo(f"Error: {error}", err=True)
+                raise typer.Exit(code=1) from None
+
+            result = pipeline.ingest(
+                path,
+                store,
+                chunk_size=profile.chunk_size,
+                chunk_overlap=profile.chunk_overlap,
+                ingested_at=datetime.now(UTC),
+                registry=registry,
+            )
+
     typer.echo(f"Ingested {result.documents} documents ({result.chunks} chunks).")
 
 

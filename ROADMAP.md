@@ -334,7 +334,31 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Add pipeline regression coverage for metadata read through a reopened Chroma instance
 - [ ] Document registry + content-hash dedup; replace chunks of changed files
   - [x] Verify a standalone SQLite registry prototype keyed by canonical source path
-  - [ ] Extract registry storage, test persistence, and integrate successful-ingestion records
+  - [x] Extract connection-injected registry initialization/read/upsert functions
+  - [x] Test registry persistence and source-keyed updates
+  - [x] Integrate registry saves after successful vector writes
+  - [x] Test committed success records and preservation of missing/existing records on indexing failure
+  - [x] Verify read-only content classification (unchanged smoke and three automated branches)
+  - [x] Extract `get_content_status` and test all branches without modifying registry records
+  - [x] Verify standalone deterministic index-profile fingerprinting
+  - [x] Extract explicit validated `IndexProfile` and deterministic fingerprint function
+  - [x] Test profile serialization, deterministic hashing, index-field sensitivity, and rejected inputs
+  - [x] Verify standalone profile-table initialization and matching-profile readback
+  - [x] Verify profile mismatch rejection preserves the saved baseline
+  - [x] Extract profile-table initialization, integrity-checked lookup, and compatibility enforcement
+  - [x] Test profile persistence, mismatch/corruption preservation, and legacy registry rejection
+  - [x] Verify standalone rejection of unprofiled non-empty Chroma collections
+  - [x] Extract `pipeline.ensure_index_compatible` and verify unchanged smoke behavior
+  - [x] Test profile compatibility across the registry and Chroma collection
+  - [x] Enforce index-profile compatibility before CLI ingestion
+  - [x] Test CLI profile persistence and rejection before ingestion with existing data preserved
+  - [x] Enforce index-profile compatibility during evaluation preparation
+  - [x] Test evaluation profile provenance and stop-before-ingest behavior on compatibility failure
+  - [x] Verify a read-only query-profile prototype comparing requested embedding model and endpoint
+  - [x] Commit-ready checkpoint: registry persistence and ingestion/evaluation profile guards (227 offline tests)
+  - [ ] Extract query embedding compatibility checks and test read-only behavior
+  - [ ] Validate embedding compatibility before querying existing indexes
+  - [ ] Guard skipping with index configuration compatibility and registry/vector consistency checks
 - [ ] CLI: `archivist list`, `archivist remove <source>`
 - [x] Include page/section in answer context and displayed citations
   - [x] Preserve EPUB section identity in context, Citation records, and CLI display
@@ -417,6 +441,159 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-03** — Close a commit-ready registry/profile-guard checkpoint:
+  227 offline tests, repository-wide Ruff lint, and all 81 Python files pass
+  formatting checks. Query checking remains a standalone prototype; production
+  query guards, unchanged-file skip/replacement, list/remove, and M2 rerun remain
+  separate follow-up work. Commit this verified stage before the next lesson.
+
+- **2026-11-03** — The owner verified matching query configuration succeeds,
+  while a different requested embedding model and a missing stored profile are
+  rejected by the temporary read-only prototype. Module extraction, regression
+  tests, and production query/evaluation integration remain pending.
+
+- **2026-11-03** — Verified all 227 offline tests, including evaluation profile
+  provenance and guard-failure orchestration. Next lesson previews query-time
+  model/endpoint checks against a stored profile using a read-only connection.
+  Query checks reject missing profiles and do not initialize them. They compare
+  requested configuration, not loaded-weight identity; CLI/eval query integration
+  and per-source vector completeness checks remain pending.
+
+- **2026-11-03** — Verified all 225 offline tests after evaluation preparation
+  profile integration. Next lesson checks saved profiles against captured run
+  parameters and injects a guard failure to verify no ingestion, no indexed
+  manifest status/counts, and no fabricated registry records. These are script
+  orchestration checks; actual compatibility decisions have separate tests.
+
+- **2026-11-03** — Verified all 225 offline tests after CLI guard coverage.
+  Next lesson adds the same guard to evaluation preparation, derives the index
+  profile from the captured RunParameters/runtime inputs, records its registry
+  path in new manifests, and uses the checked profile for embedding/splitting.
+  Candidate changes pass 225 tests plus targeted saved-profile/failure probes;
+  existing evaluation artifacts are not rewritten.
+
+- **2026-11-03** — Verified all 223 offline tests after CLI ingest profile
+  enforcement. The CLI collects shared version inputs, reuses the checked store,
+  and reports compatibility failures before ingestion. Next lesson extends
+  CLI tests for persisted settings and refusal of unprofiled/mismatched stores,
+  asserting ingestion is not called and prior records/data remain unchanged.
+
+- **2026-11-03** — Verified all 223 offline tests, including cross-store
+  profile initialization/match/refusal with preserved data. Next lesson wires
+  CLI ingestion to a profile built from explicit settings/runtime versions,
+  shares the relevant package-name list with the smoke script, and reports
+  compatibility failures before ingestion. Evaluation/query entry integration
+  and per-source completeness checks remain pending.
+
+- **2026-11-03** — Extracted the cross-store profile guard; the owner reports
+  the seeded-vector smoke is rejected as expected. Next lesson tests empty-index
+  initialization, refusal of unprofiled vectors, and matching/mismatching
+  profiles with preserved existing vectors and profile records. These tests
+  do not establish per-source chunk completeness or production skip behavior.
+
+- **2026-11-03** — The owner verified the index-guard prototype: empty temporary
+  Chroma permits profile creation, while seeded vectors without a profile are
+  rejected. Next lesson extracts pipeline.ensure_index_compatible without
+  calling it from production ingest yet. The helper checks initialization and
+  profile compatibility, not per-source chunk completeness or concurrent writes.
+
+- **2026-11-03** — Verified both actual index-guard smoke script branches:
+  empty temporary Chroma initializes a profile; seeded unprofiled Chroma is
+  rejected. Next lesson extracts the cross-store guard into pipeline.py while
+  registry.py remains SQLite-only. The guard does not yet check per-source
+  chunk completeness and is not called by production ingest/ask.
+
+- **2026-11-03** — Verified all 219 offline tests, including seven registry
+  profile cases. Next lesson uses temporary Chroma/SQLite and fake embeddings
+  to distinguish a new empty collection from existing vectors without a profile.
+  Probe one ID through public get(limit=1, include=[]); no real indexes are
+  relabeled and production enforcement is still pending.
+
+- **2026-11-03** — The owner verified extracted profile helpers reject chunk
+  changes and preserve the matching baseline. Next lesson adds reopen/match
+  checks, preserved mismatch/corruption cases (invalid JSON, invalid model,
+  changed JSON, changed digest), and rejection of pre-profile file records.
+  Production profile enforcement remains pending.
+
+- **2026-11-03** — Begin profile persistence extraction into registry helpers.
+  Initialization adds the profile table without deleting file records; lookup
+  validates stored JSON/digest, and ensure returns created/matching status.
+  A registry with file records but no profile must not be relabeled with current
+  settings. Checking for unregistered Chroma data remains an entry-point task
+  before production profile initialization. Candidate helpers pass 212 existing
+  tests; owner implementation and regression cases follow.
+
+- **2026-11-03** — The owner verified chunk-size 800 is rejected against the
+  saved 1000 baseline; a subsequent default run still matches the original
+  fingerprint. The profile smoke prototype preserves its baseline on mismatch.
+  Module extraction, automated stored-JSON/digest checks, and production index
+  compatibility enforcement remain pending.
+
+- **2026-11-03** — The owner verified initial profile persistence and matching
+  readback in the smoke database. Combined connection/transaction contexts to
+  satisfy Ruff SIM117; lint/format checks pass. Owner-run mismatch rejection
+  and baseline-preservation verification remain pending.
+
+- **2026-11-03** — Verified all 212 offline tests, including 18 profile cases.
+  Next lesson persists complete profile JSON plus fingerprint in a separate
+  smoke SQLite table, initializes once, and rejects mismatches without updating
+  the baseline. Validate stored JSON against its digest before comparison.
+  This prototype does not certify or initialize an existing vector index.
+
+- **2026-11-03** — The owner verified the extracted IndexProfile smoke step;
+  all 194 existing offline tests pass. Next lesson adds fixed-input JSON/hash
+  checks, dictionary-order independence, sensitivity to eight index conditions,
+  and rejected invalid/extra query or secret fields. Configuration persistence
+  and production skip enforcement remain pending.
+
+- **2026-11-03** — The owner verified chunk-size 1000/800 profile previews
+  produce different fingerprints with the same remaining recorded fields.
+  Next lesson extracts a strict explicit IndexProfile model and fingerprint
+  function, preserving prototype serialization while keeping environment/version
+  collection in entry points. No profile persistence or skip is enabled yet.
+
+- **2026-11-03** — Verified all 194 offline tests, including all content-status
+  branches with unchanged records/counts. Begin index-profile fingerprinting:
+  selected embedding/splitting settings, separator order, explicit pipeline
+  revision, Python and relevant package versions; omit secrets/query-only
+  settings. Requested model identity is not proof of loaded weights. Profile
+  persistence, compatibility enforcement, and vector consistency remain pending.
+
+- **2026-11-03** — The owner verified unchanged-content status against the
+  smoke registry; manual changed/new observations remain unreported. Next
+  lesson extracts the content-status query and adds deterministic tests for
+  all three states plus preserved records/counts. Classification alone does
+  not authorize skipping embedding or prove vector/index compatibility.
+
+- **2026-11-03** — Verified all 191 offline tests, including committed registry
+  success and unchanged missing/old records when the indexing entry point raises.
+  Next lesson previews source/hash-based content classification against the
+  smoke registry in SQLite read-only mode. No production skip is enabled;
+  compatible index configuration and registry/vector consistency are prerequisites.
+
+- **2026-11-03** — The owner verified registry integration with 188 offline
+  tests and lint/format checks passing. Next lesson adds reopened-registry
+  success checks and injected indexing-failure cases for both new sources and
+  previously recorded sources. These cover registry ordering, not rollback of
+  partial Chroma writes or cross-store transaction recovery.
+
+- **2026-11-03** — Verified all 188 offline tests, including registry lookup,
+  close/reopen persistence, source-keyed updates, and distinct sources sharing
+  hashes. Next lesson injects registry connections into ingestion and saves
+  records only after vector upsert returns; CLI/eval own connection lifetimes,
+  and CLI tests must isolate the new storage side effect. A temporary candidate
+  checkout passes all 188 tests; production edits remain owner-entered.
+
+- **2026-11-03** — The owner verified extracted registry helpers through the
+  smoke script; all 184 existing offline tests pass. Next lesson adds isolated
+  tests for absent sources, close/reopen persistence, source-keyed replacement,
+  and independent sources sharing a hash, including a quoted source path.
+
+- **2026-11-03** — Begin registry module extraction from the verified SQLite
+  prototype. Initialization/read/save functions receive a sqlite3 connection;
+  the entry point owns its path and lifetime. Read results reuse FileMetadata.
+  Record writes commit independently; Chroma integration remains pending.
 
 - **2026-11-03** — The owner reports the standalone SQLite registry smoke
   prototype passes. Pre-commit checks confirm 184 offline tests, repository-wide

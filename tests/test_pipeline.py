@@ -1,13 +1,25 @@
+import sqlite3
+from collections.abc import Iterator
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 from langchain_chroma import Chroma
+from langchain_core.documents import Document
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from langchain_core.language_models import FakeListChatModel
 
 from archivist import pipeline
-from archivist.metadata import hash_file
+from archivist.index_profile import IndexProfile
+from archivist.metadata import build_file_metadata, hash_file
+from archivist.registry import (
+    ensure_index_profile,
+    get_index_profile,
+    get_record,
+    initialize_registry,
+    save_record,
+)
 
 
 @pytest.fixture
@@ -27,25 +39,31 @@ def notes(tmp_path: Path) -> Path:
     return notes
 
 
-def test_ingest_reports_documents_and_chunks(notes: Path, store: Chroma):
+def test_ingest_reports_documents_and_chunks(
+    notes: Path, store: Chroma, registry: sqlite3.Connection
+):
     result = pipeline.ingest(
         notes,
         store,
         chunk_size=1000,
         chunk_overlap=100,
         ingested_at=datetime(2026, 11, 3, 12, tzinfo=UTC),
+        registry=registry,
     )
     assert result == pipeline.IngestResult(documents=2, chunks=2)
     assert len(store.get()["ids"]) == 2
 
 
-def test_ask_answers_from_ingested_documents(notes: Path, store: Chroma):
+def test_ask_answers_from_ingested_documents(
+    notes: Path, store: Chroma, registry: sqlite3.Connection
+):
     pipeline.ingest(
         notes,
         store,
         chunk_size=1000,
         chunk_overlap=100,
         ingested_at=datetime(2026, 11, 3, 12, tzinfo=UTC),
+        registry=registry,
     )
     llm = FakeListChatModel(responses=["It keeps data in memory [1]."])
 
@@ -55,13 +73,16 @@ def test_ask_answers_from_ingested_documents(notes: Path, store: Chroma):
     assert answer.sources == [str((notes / "redis.md").resolve())]
 
 
-def test_ingest_persists_file_metadata(notes: Path, store: Chroma, tmp_path: Path):
+def test_ingest_persists_file_metadata(
+    notes: Path, store: Chroma, tmp_path: Path, registry: sqlite3.Connection
+):
     result = pipeline.ingest(
         notes,
         store,
         chunk_size=12,
         chunk_overlap=2,
         ingested_at=datetime(2026, 11, 3, 12, tzinfo=UTC),
+        registry=registry,
     )
 
     reopened = Chroma(
@@ -90,3 +111,148 @@ def test_ingest_persists_file_metadata(notes: Path, store: Chroma, tmp_path: Pat
 
         original = Path(source).read_text(encoding="utf-8")
         assert text == original[start : start + len(text)]
+
+
+@pytest.fixture
+def registry(tmp_path: Path) -> Iterator[sqlite3.Connection]:
+    with closing(sqlite3.connect(tmp_path / "registry.sqlite3")) as connection:
+        initialize_registry(connection)
+        yield connection
+
+
+def test_ingest_persists_registry_records(
+    notes: Path,
+    store: Chroma,
+    registry: sqlite3.Connection,
+    tmp_path: Path,
+):
+    ingested_at = datetime(2026, 11, 3, 12, tzinfo=UTC)
+    result = pipeline.ingest(
+        notes,
+        store,
+        chunk_size=1000,
+        chunk_overlap=100,
+        ingested_at=ingested_at,
+        registry=registry,
+    )
+
+    assert len(store.get()["ids"]) == result.chunks == 2
+    with closing(sqlite3.connect(tmp_path / "registry.sqlite3")) as reopened:
+        for path in notes.iterdir():
+            expected = build_file_metadata(path, ingested_at=ingested_at)
+            assert get_record(reopened, expected.source) == expected
+        assert reopened.execute("SELECT COUNT(*) FROM documents").fetchone()[0] == 2
+
+
+@pytest.mark.parametrize("has_previous_record", [False, True])
+def test_ingest_indexing_failure_preserves_registry(
+    notes: Path,
+    store: Chroma,
+    registry: sqlite3.Connection,
+    monkeypatch: pytest.MonkeyPatch,
+    has_previous_record: bool,
+):
+    path = notes / "redis.md"
+    source = str(path.resolve())
+    previous = None
+    if has_previous_record:
+        previous = build_file_metadata(
+            path, ingested_at=datetime(2026, 11, 3, 11, tzinfo=UTC)
+        )
+        save_record(registry, previous)
+        path.write_text("Changed Redis content.", encoding="utf-8")
+
+    def fail_indexing(vector_store, chunks):
+        raise RuntimeError("simulated indexing failure")
+
+    monkeypatch.setattr(pipeline, "index_chunks", fail_indexing)
+
+    with pytest.raises(RuntimeError, match="simulated indexing failure"):
+        pipeline.ingest(
+            notes,
+            store,
+            chunk_size=1000,
+            chunk_overlap=100,
+            ingested_at=datetime(2026, 11, 3, 12, tzinfo=UTC),
+            registry=registry,
+        )
+
+    assert get_record(registry, source) == previous
+    assert get_record(registry, str((notes / "git.md").resolve())) is None
+
+
+@pytest.fixture
+def profile() -> IndexProfile:
+    return IndexProfile(
+        embedding_model="test-embedding",
+        embedding_base_url="http://localhost:1234/v1",
+        chunk_size=1000,
+        chunk_overlap=200,
+        separators=[" "],
+        python="3.13.5",
+        packages={},
+    )
+
+
+@pytest.fixture
+def populated_store(store: Chroma) -> Chroma:
+    store.add_documents(
+        [
+            Document(
+                page_content="Existing content",
+                metadata={"source": "/notes/existing.md"},
+            )
+        ],
+        ids=["existing-chunk"],
+    )
+    return store
+
+
+def test_ensure_index_compatible_initializes_empty_index(
+    store: Chroma, registry: sqlite3.Connection, profile: IndexProfile
+):
+    assert pipeline.ensure_index_compatible(store, registry, profile) is True
+    assert get_index_profile(registry) == profile
+    assert store.get(limit=1, include=[])["ids"] == []
+
+
+def test_ensure_index_compatible_rejects_unprofiled_vectors(
+    populated_store: Chroma,
+    registry: sqlite3.Connection,
+    profile: IndexProfile,
+):
+    before = populated_store.get(include=["documents", "metadatas"])
+
+    with pytest.raises(ValueError, match="Vectors exist without an index profile"):
+        pipeline.ensure_index_compatible(populated_store, registry, profile)
+
+    assert get_index_profile(registry) is None
+    assert populated_store.get(include=["documents", "metadatas"]) == before
+
+
+@pytest.mark.parametrize("profile_changed", [False, True])
+def test_existing_index_requires_matching_profile(
+    populated_store: Chroma,
+    registry: sqlite3.Connection,
+    profile: IndexProfile,
+    profile_changed: bool,
+):
+    ensure_index_profile(registry, profile)
+    current = (
+        IndexProfile.model_validate({**profile.model_dump(), "chunk_size": 800})
+        if profile_changed
+        else profile
+    )
+    before = populated_store.get(include=["documents", "metadatas"])
+
+    if profile_changed:
+        with pytest.raises(ValueError, match="Index profile changed"):
+            pipeline.ensure_index_compatible(populated_store, registry, current)
+    else:
+        assert (
+            pipeline.ensure_index_compatible(populated_store, registry, current)
+            is False
+        )
+
+    assert get_index_profile(registry) == profile
+    assert populated_store.get(include=["documents", "metadatas"]) == before

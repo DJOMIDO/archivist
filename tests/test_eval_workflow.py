@@ -1,5 +1,7 @@
 import json
 import runpy
+import sqlite3
+from contextlib import closing
 from dataclasses import asdict
 from pathlib import Path
 from unittest.mock import Mock
@@ -10,6 +12,7 @@ from langchain_core.language_models import FakeListChatModel
 
 from archivist.config import Settings
 from archivist.evaluation import fingerprint_eval_data, run_eval_case
+from archivist.registry import get_index_profile
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -161,3 +164,51 @@ def test_indexing_failure_is_not_marked_indexed(monkeypatch, offline_environment
     run_dir = next(Path("storage/eval-runs").iterdir())
     assert read_manifest(run_dir)["status"] == "prepared"
     assert not (run_dir / "results.jsonl").exists()
+
+
+def test_prepare_saves_profile_matching_recorded_parameters(
+    monkeypatch, offline_environment
+):
+    settings, _ = offline_environment
+    run_dir = prepare_run(monkeypatch)
+    record = read_manifest(run_dir)
+
+    assert record["status"] == "indexed"
+    registry_path = run_dir / record["paths"]["registry"]
+    assert registry_path.is_file()
+
+    with closing(sqlite3.connect(registry_path)) as registry:
+        profile = get_index_profile(registry)
+
+    assert profile is not None
+    assert profile.embedding_model == record["parameters"]["embedding_model"]
+    assert profile.chunk_size == record["parameters"]["chunk_size"]
+    assert profile.chunk_overlap == record["parameters"]["chunk_overlap"]
+    assert profile.embedding_base_url == settings.llm_base_url
+    assert profile.python == record["software"]["python"]
+
+
+def test_prepare_profile_failure_stops_before_ingestion(
+    monkeypatch, offline_environment
+):
+    guard = Mock(side_effect=ValueError("simulated incompatible profile"))
+    ingest = Mock(side_effect=AssertionError("ingest should not run"))
+    monkeypatch.setattr("archivist.pipeline.ensure_index_compatible", guard)
+    monkeypatch.setattr("archivist.pipeline.ingest", ingest)
+
+    with pytest.raises(ValueError, match="simulated incompatible profile"):
+        prepare_run(monkeypatch)
+
+    guard.assert_called_once()
+    ingest.assert_not_called()
+
+    run_dir = next(Path("storage/eval-runs").iterdir())
+    record = read_manifest(run_dir)
+    assert record["status"] == "prepared"
+    assert "documents" not in record
+    assert "chunks" not in record
+    assert not (run_dir / "results.jsonl").exists()
+
+    with closing(sqlite3.connect(run_dir / record["paths"]["registry"])) as registry:
+        assert get_index_profile(registry) is None
+        assert registry.execute("SELECT COUNT(*) FROM documents").fetchone()[0] == 0
