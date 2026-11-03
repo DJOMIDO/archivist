@@ -333,7 +333,7 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Integrate file metadata into ingestion with an explicit timestamp
   - [x] Add pipeline regression coverage for metadata read through a reopened Chroma instance
 - [ ] Document registry + content-hash dedup; replace chunks of changed files
-  - [ ] Verify a standalone SQLite registry prototype keyed by canonical source path
+  - [x] Verify a standalone SQLite registry prototype keyed by canonical source path
   - [ ] Extract registry storage, test persistence, and integrate successful-ingestion records
 - [ ] CLI: `archivist list`, `archivist remove <source>`
 - [x] Include page/section in answer context and displayed citations
@@ -417,6 +417,11 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-03** — The owner reports the standalone SQLite registry smoke
+  prototype passes. Pre-commit checks confirm 184 offline tests, repository-wide
+  Ruff lint, and format checks pass. Production registry integration, unchanged
+  file skipping, and changed-file replacement remain pending.
 
 - **2026-11-03** — Verified all 184 offline tests, including reopened-Chroma
   metadata checks for multiple files/chunks and per-chunk source/hash/text
