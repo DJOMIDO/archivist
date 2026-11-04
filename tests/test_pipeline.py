@@ -256,3 +256,54 @@ def test_existing_index_requires_matching_profile(
 
     assert get_index_profile(registry) == profile
     assert populated_store.get(include=["documents", "metadatas"]) == before
+
+
+@pytest.mark.parametrize(
+    ("scenario", "expected_error"),
+    [
+        ("matching", None),
+        ("model_changed", "Query embedding configuration does not match the index"),
+        ("endpoint_changed", "Query embedding configuration does not match the index"),
+        ("missing_profile", "Index profile is missing"),
+    ],
+)
+def test_query_compatibility_is_read_only(
+    registry: sqlite3.Connection,
+    profile: IndexProfile,
+    tmp_path: Path,
+    scenario: str,
+    expected_error: str | None,
+):
+    if scenario != "missing_profile":
+        ensure_index_profile(registry, profile)
+
+    before = tuple(registry.iterdump())
+    embedding_model = (
+        "other-embedding" if scenario == "model_changed" else profile.embedding_model
+    )
+    embedding_base_url = (
+        "http://localhost:9999/v1"
+        if scenario == "endpoint_changed"
+        else profile.embedding_base_url
+    )
+
+    registry_uri = (tmp_path / "registry.sqlite3").resolve().as_uri() + "?mode=ro"
+    with closing(sqlite3.connect(registry_uri, uri=True)) as readonly:
+        if expected_error is None:
+            restored = pipeline.ensure_query_compatible(
+                readonly,
+                embedding_model=embedding_model,
+                embedding_base_url=embedding_base_url,
+            )
+            assert restored == profile
+        else:
+            with pytest.raises(ValueError, match=expected_error):
+                pipeline.ensure_query_compatible(
+                    readonly,
+                    embedding_model=embedding_model,
+                    embedding_base_url=embedding_base_url,
+                )
+
+        assert readonly.total_changes == 0
+
+    assert tuple(registry.iterdump()) == before

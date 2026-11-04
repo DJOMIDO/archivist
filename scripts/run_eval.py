@@ -2,6 +2,8 @@
 
 import argparse
 import json
+import sqlite3
+from contextlib import closing
 from dataclasses import asdict
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -20,6 +22,7 @@ from archivist.evaluation import (
     run_eval_case,
 )
 from archivist.indexing import get_embeddings, get_vector_store
+from archivist.pipeline import ensure_query_compatible
 from archivist.qa import SYSTEM_PROMPT, get_chat_model
 
 parser = argparse.ArgumentParser(description=__doc__)
@@ -53,6 +56,19 @@ cases = load_eval_cases(cases_path, corpus)
 output = run_dir / "results.jsonl"
 
 try:
+    registry_uri = (run_dir / "registry.sqlite3").resolve().as_uri() + "?mode=ro"
+    try:
+        with closing(sqlite3.connect(registry_uri, uri=True)) as registry:
+            profile = ensure_query_compatible(
+                registry,
+                embedding_model=parameters.embedding_model,
+                embedding_base_url=settings.llm_base_url,
+            )
+    except sqlite3.Error as error:
+        raise ValueError(
+            "Cannot read the evaluation index registry; prepare a new run"
+        ) from error
+
     with output.open("x", encoding="utf-8") as file:
         record.update(
             status="running",
@@ -65,8 +81,8 @@ try:
         )
 
         embeddings = get_embeddings(
-            parameters.embedding_model,
-            settings.llm_base_url,
+            profile.embedding_model,
+            profile.embedding_base_url,
             settings.llm_api_key,
         )
         store = get_vector_store(embeddings, run_dir / "chroma")

@@ -356,7 +356,12 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Test evaluation profile provenance and stop-before-ingest behavior on compatibility failure
   - [x] Verify a read-only query-profile prototype comparing requested embedding model and endpoint
   - [x] Commit-ready checkpoint: registry persistence and ingestion/evaluation profile guards (227 offline tests)
-  - [ ] Extract query embedding compatibility checks and test read-only behavior
+  - [x] Extract `pipeline.ensure_query_compatible` and verify the read-only smoke
+  - [x] Test query configuration match/refusal without registry writes
+  - [x] Enforce read-only query-profile checks before CLI model/store setup
+  - [x] Test CLI query refusal before model/store setup
+  - [x] Check evaluation query configuration before result/manifest writes
+  - [ ] Test evaluation query refusal preserves the prepared run
   - [ ] Validate embedding compatibility before querying existing indexes
   - [ ] Guard skipping with index configuration compatibility and registry/vector consistency checks
 - [ ] CLI: `archivist list`, `archivist remove <source>`
@@ -441,6 +446,42 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-04** — Evaluation execution now verifies the recorded embedding
+  model and requested endpoint against a read-only registry before output or
+  manifest writes, then uses the validated profile for its embedding factory.
+  The owner reports tests passing. Dedicated refusal cases and a successful
+  run with a changed current embedding setting are the final tests for this
+  focused query-guard commit stage.
+
+- **2026-11-04** — The owner reports CLI refusal tests passing for missing
+  registry/profile and changed embedding model/endpoint. They assert neither
+  backend factory runs and storage remains unchanged. Next apply read-only
+  compatibility checks before evaluation output creation, using the recorded
+  embedding model and the requested endpoint; refusal workflow tests follow.
+
+- **2026-11-04** — CLI ask now checks the registry through a read-only
+  connection before constructing model clients or opening Chroma. The owner
+  reports tests passing after explicitly preparing profiles for offline query
+  fixtures. Next cover missing registry/profile and changed embedding settings
+  at the CLI boundary, including factory non-invocation and unchanged storage.
+
+- **2026-11-04** — The owner reports the four query-guard cases passing:
+  matching settings return the profile, changed model/endpoint and missing
+  profile are rejected, and read-only checks preserve registry contents.
+  Next integrate the guard into CLI ask and explicitly seed profiles for
+  existing offline query tests; entry-point refusal tests follow.
+
+- **2026-11-04** — Extracted `pipeline.ensure_query_compatible` and switched
+  the read-only smoke to use it. The owner reports 227 tests and Ruff passing;
+  matching settings succeed, while a changed model or missing profile is
+  rejected. Dedicated query-guard tests and production entry wiring remain pending.
+
+- **2026-11-03** — Start the next focused query-guard commit stage after a
+  clean-worktree checkpoint. Extract the verified prototype into
+  pipeline.ensure_query_compatible, returning the validated stored profile;
+  missing/mismatched configuration raises without initializing any profile.
+  Tests and CLI/evaluation query wiring follow before the next commit checkpoint.
 
 - **2026-11-03** — Close a commit-ready registry/profile-guard checkpoint:
   227 offline tests, repository-wide Ruff lint, and all 81 Python files pass

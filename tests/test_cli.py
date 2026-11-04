@@ -13,7 +13,13 @@ from typer.testing import CliRunner
 
 from archivist.cli import app
 from archivist.config import get_settings
-from archivist.registry import get_index_profile, get_record
+from archivist.index_profile import IndexProfile
+from archivist.registry import (
+    ensure_index_profile,
+    get_index_profile,
+    get_record,
+    initialize_registry,
+)
 
 runner = CliRunner()
 
@@ -76,7 +82,7 @@ def test_ingest_missing_path_fails(tmp_path, fake_backends):
     assert result.exit_code != 0
 
 
-def test_unreachable_model_server_gives_short_error(monkeypatch, fake_backends):
+def test_unreachable_model_server_gives_short_error(monkeypatch, query_profile):
     def refuse(*args, **kwargs):
         raise APIConnectionError(request=httpx.Request("POST", "http://localhost"))
 
@@ -89,7 +95,7 @@ def test_unreachable_model_server_gives_short_error(monkeypatch, fake_backends):
     assert "Traceback" not in result.output
 
 
-def test_ask_displays_pdf_page(fake_backends):
+def test_ask_displays_pdf_page(fake_backends, query_profile):
     fake_backends.add_documents(
         [
             Document(
@@ -107,7 +113,7 @@ def test_ask_displays_pdf_page(fake_backends):
     assert "Sources:\n  - /notes/lab.pdf, page 7" in result.output
 
 
-def test_ask_displays_epub_section(fake_backends):
+def test_ask_displays_epub_section(fake_backends, query_profile):
     fake_backends.add_documents(
         [
             Document(
@@ -187,3 +193,92 @@ def test_ingest_rejects_profile_changes_before_ingestion(
     ) as registry:
         assert get_index_profile(registry) == previous_profile
         assert get_record(registry, str(path.resolve())) == previous_record
+
+
+@pytest.fixture
+def query_profile(fake_backends):
+    settings = get_settings()
+    settings.storage_dir.mkdir(parents=True, exist_ok=True)
+    profile = IndexProfile(
+        embedding_model=settings.embedding_model,
+        embedding_base_url=settings.llm_base_url,
+        chunk_size=settings.chunk_size,
+        chunk_overlap=settings.chunk_overlap,
+        separators=[" "],
+        python="3.13.5",
+        packages={},
+    )
+    with closing(
+        sqlite3.connect(settings.storage_dir / "registry.sqlite3")
+    ) as registry:
+        initialize_registry(registry)
+        ensure_index_profile(registry, profile)
+    return profile
+
+
+@pytest.fixture
+def blocked_query_backends(fake_backends, monkeypatch):
+    chat = Mock(side_effect=AssertionError("chat factory should not run"))
+    store = Mock(side_effect=AssertionError("vector store factory should not run"))
+    monkeypatch.setattr("archivist.cli.get_chat_model", chat)
+    monkeypatch.setattr("archivist.cli.open_vector_store", store)
+    return chat, store
+
+
+def test_ask_missing_registry_stops_before_backend_setup(blocked_query_backends):
+    storage_dir = get_settings().storage_dir
+    assert not storage_dir.exists()
+
+    result = runner.invoke(app, ["ask", "anything"])
+
+    assert result.exit_code == 1
+    assert "Error: cannot read the index registry" in result.output
+    assert "Traceback" not in result.output
+    assert not storage_dir.exists()
+    for backend in blocked_query_backends:
+        backend.assert_not_called()
+
+
+def test_ask_missing_profile_preserves_registry(blocked_query_backends):
+    storage_dir = get_settings().storage_dir
+    storage_dir.mkdir(parents=True)
+    path = storage_dir / "registry.sqlite3"
+    with closing(sqlite3.connect(path)) as registry:
+        initialize_registry(registry)
+    before = path.read_bytes()
+
+    result = runner.invoke(app, ["ask", "anything"])
+
+    assert result.exit_code == 1
+    assert "Error: Index profile is missing" in result.output
+    assert "Traceback" not in result.output
+    assert path.read_bytes() == before
+    for backend in blocked_query_backends:
+        backend.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("setting", "value"),
+    [
+        ("ARCHIVIST_EMBEDDING_MODEL", "other-embedding"),
+        ("ARCHIVIST_LLM_BASE_URL", "http://localhost:9999/v1"),
+    ],
+)
+def test_ask_changed_embedding_settings_stop_before_backend_setup(
+    query_profile, blocked_query_backends, monkeypatch, setting, value
+):
+    path = get_settings().storage_dir / "registry.sqlite3"
+    before = path.read_bytes()
+    monkeypatch.setenv(setting, value)
+    get_settings.cache_clear()
+
+    result = runner.invoke(app, ["ask", "anything"])
+
+    assert result.exit_code == 1
+    assert (
+        "Error: Query embedding configuration does not match the index" in result.output
+    )
+    assert "Traceback" not in result.output
+    assert path.read_bytes() == before
+    for backend in blocked_query_backends:
+        backend.assert_not_called()

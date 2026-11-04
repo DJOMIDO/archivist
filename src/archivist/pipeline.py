@@ -48,6 +48,27 @@ def ensure_index_compatible(
     return ensure_index_profile(registry, profile)
 
 
+def ensure_query_compatible(
+    registry: sqlite3.Connection,
+    *,
+    embedding_model: str,
+    embedding_base_url: str,
+) -> IndexProfile:
+    """Return the stored profile if requested embedding settings match."""
+    stored = get_index_profile(registry)
+    if stored is None:
+        raise ValueError(
+            "Index profile is missing; query compatibility cannot be verified"
+        )
+
+    requested = (embedding_model, embedding_base_url)
+    recorded = (stored.embedding_model, stored.embedding_base_url)
+    if requested != recorded:
+        raise ValueError("Query embedding configuration does not match the index")
+
+    return stored
+
+
 def ingest(
     path: Path,
     vector_store: VectorStore,

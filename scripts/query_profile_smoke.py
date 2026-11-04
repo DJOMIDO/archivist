@@ -5,11 +5,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from archivist.index_profile import IndexProfile
-from archivist.registry import (
-    ensure_index_profile,
-    get_index_profile,
-    initialize_registry,
-)
+from archivist.pipeline import ensure_query_compatible
+from archivist.registry import ensure_index_profile, initialize_registry
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--embedding-model", default="offline-test-embedding")
@@ -34,18 +31,12 @@ with TemporaryDirectory() as directory:
         if not args.without_profile:
             ensure_index_profile(registry, profile)
 
-    registry_uri = registry_path.resolve().as_uri() + "?mode=ro"
+        registry_uri = registry_path.resolve().as_uri() + "?mode=ro"
     with closing(sqlite3.connect(registry_uri, uri=True)) as registry:
-        stored = get_index_profile(registry)
-
-    if stored is None:
-        raise ValueError(
-            "Index profile is missing; query compatibility cannot be verified"
+        ensure_query_compatible(
+            registry,
+            embedding_model=args.embedding_model,
+            embedding_base_url=args.embedding_base_url,
         )
-
-    requested = (args.embedding_model, args.embedding_base_url)
-    recorded = (stored.embedding_model, stored.embedding_base_url)
-    if requested != recorded:
-        raise ValueError("Query embedding configuration does not match the index")
 
     print("Query embedding configuration matches.")

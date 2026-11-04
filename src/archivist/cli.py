@@ -116,6 +116,25 @@ def ask(
 ) -> None:
     """Answer a question from your documents, with sources."""
     settings = get_settings()
+    registry_uri = (
+        settings.storage_dir / "registry.sqlite3"
+    ).resolve().as_uri() + "?mode=ro"
+    try:
+        with closing(sqlite3.connect(registry_uri, uri=True)) as registry:
+            pipeline.ensure_query_compatible(
+                registry,
+                embedding_model=settings.embedding_model,
+                embedding_base_url=settings.llm_base_url,
+            )
+    except sqlite3.Error:
+        typer.echo(
+            "Error: cannot read the index registry; use a new index or rebuild it.",
+            err=True,
+        )
+        raise typer.Exit(code=1) from None
+    except ValueError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(code=1) from None
     llm = get_chat_model(
         settings.chat_model,
         settings.llm_base_url,

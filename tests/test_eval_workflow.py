@@ -99,6 +99,7 @@ def test_prepare_and_execute_snapshot(monkeypatch, offline_environment):
         "Changed original document.", encoding="utf-8"
     )
     Path("evals/cases.json").write_text("changed original cases", encoding="utf-8")
+    settings.embedding_model = "ignored-current-embedding"
     settings.chat_model = "ignored-current-model"
     settings.chat_temperature = 0.9
 
@@ -212,3 +213,58 @@ def test_prepare_profile_failure_stops_before_ingestion(
     with closing(sqlite3.connect(run_dir / record["paths"]["registry"])) as registry:
         assert get_index_profile(registry) is None
         assert registry.execute("SELECT COUNT(*) FROM documents").fetchone()[0] == 0
+
+
+@pytest.mark.parametrize(
+    ("scenario", "expected_error"),
+    [
+        ("missing_registry", "Cannot read the evaluation index registry"),
+        ("missing_profile", "Index profile is missing"),
+        ("changed_model", "Query embedding configuration does not match the index"),
+        ("changed_endpoint", "Query embedding configuration does not match the index"),
+    ],
+)
+def test_query_guard_failure_preserves_indexed_run(
+    monkeypatch, offline_environment, scenario, expected_error
+):
+    settings, _ = offline_environment
+    run_dir = prepare_run(monkeypatch)
+    manifest = run_dir / "manifest.json"
+    registry_path = run_dir / "registry.sqlite3"
+
+    if scenario == "missing_registry":
+        registry_path.unlink()
+    elif scenario == "missing_profile":
+        with closing(sqlite3.connect(registry_path)) as registry, registry:
+            registry.execute("DELETE FROM index_profile")
+    elif scenario == "changed_model":
+        record = read_manifest(run_dir)
+        record["parameters"]["embedding_model"] = "other-embedding"
+        manifest.write_text(json.dumps(record), encoding="utf-8")
+    else:
+        settings.llm_base_url = "http://localhost:9999/v1"
+
+    manifest_before = manifest.read_bytes()
+    registry_before = registry_path.read_bytes() if registry_path.exists() else None
+    factories = []
+    for name in (
+        "archivist.indexing.get_embeddings",
+        "archivist.indexing.get_vector_store",
+        "archivist.qa.get_chat_model",
+    ):
+        factory = Mock(side_effect=AssertionError(f"{name} should not run"))
+        monkeypatch.setattr(name, factory)
+        factories.append(factory)
+
+    with pytest.raises(ValueError, match=expected_error):
+        run_script(monkeypatch, "run_eval.py", str(run_dir))
+
+    assert manifest.read_bytes() == manifest_before
+    assert read_manifest(run_dir)["status"] == "indexed"
+    assert not (run_dir / "results.jsonl").exists()
+    if registry_before is None:
+        assert not registry_path.exists()
+    else:
+        assert registry_path.read_bytes() == registry_before
+    for factory in factories:
+        factory.assert_not_called()
