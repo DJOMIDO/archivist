@@ -139,6 +139,7 @@ archivist/
 │   ├── metadata.py      # file fingerprints and shared ingestion metadata (M3)
 │   ├── registry.py      # SQLite file-record initialization, lookup, and updates (M3)
 │   ├── index_profile.py # explicit index configuration and deterministic fingerprint (M3)
+│   ├── chunk_manifest.py # chunk IDs and text digests for consistency checks (M3)
 │   ├── splitting.py     # text splitters, metadata preservation
 │   ├── indexing.py      # embedding/vector-store factories, stable chunk IDs (registry in M3)
 │   ├── retrieval.py     # top-k search with distances (MMR / hybrid in M5)

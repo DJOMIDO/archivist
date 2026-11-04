@@ -361,8 +361,14 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Enforce read-only query-profile checks before CLI model/store setup
   - [x] Test CLI query refusal before model/store setup
   - [x] Check evaluation query configuration before result/manifest writes
-  - [ ] Test evaluation query refusal preserves the prepared run
-  - [ ] Validate embedding compatibility before querying existing indexes
+  - [x] Test evaluation query refusal preserves the prepared run
+  - [x] Validate embedding compatibility before querying existing indexes
+  - [x] Query-guard checkpoint: committed CLI/evaluation protection (239 offline tests)
+  - [x] Demonstrate unchanged registry content with partially missing vectors
+  - [x] Compare expected/actual chunk ID sets, including equal-count mismatches
+  - [x] Detect replaced chunk text despite unchanged IDs using per-chunk digests
+  - [x] Extract a pure chunk text-manifest builder with duplicate-ID/length checks
+  - [ ] Test chunk text-manifest construction before adding registry persistence
   - [ ] Guard skipping with index configuration compatibility and registry/vector consistency checks
 - [ ] CLI: `archivist list`, `archivist remove <source>`
 - [x] Include page/section in answer context and displayed citations
@@ -446,6 +452,37 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-04** — Confirmed the pure chunk-manifest builder and smoke-script
+  integration are present. The next lesson adds ten offline cases covering
+  fixed text digests, Unicode/empty text, distinct IDs with identical text,
+  duplicate IDs, length mismatch, empty input, and pairing/input preservation.
+  Candidate tests pass against the current helper; owner test entry is pending.
+
+- **2026-11-04** — Verified the same-ID text-replacement experiment. Begin
+  extracting `chunk_manifest.build_chunk_manifest`, mapping explicit IDs to
+  UTF-8 text SHA-256 digests, with duplicate-ID and input-length rejection.
+  The helper is independent of Chroma and SQLite; metadata/vector validation
+  and persisted manifests remain separate pending work.
+
+- **2026-11-04** — The owner verified expected/actual ID-set comparisons,
+  including equal-count mismatches. Next extend the temporary prototype with
+  per-chunk text SHA-256 digests to detect same-ID text replacement. This
+  experiment does not validate metadata or embedding values; persisted chunk
+  manifests and production skip decisions remain pending.
+
+- **2026-11-04** — Verified the temporary registry/vector experiment:
+  deleting one of two chunks leaves the registry content status unchanged.
+  Extend the prototype to compare independently recorded expected chunk IDs
+  with actual source-filtered IDs and expose equal-count replacements.
+  Expected IDs are still experiment constants, not persisted registry state.
+
+- **2026-11-04** — Verified query-guard commit `3e0c316` from a clean worktree:
+  239 offline tests, repository-wide Ruff lint, and formatting for 81 files pass.
+  CLI and evaluation refuse incompatible query settings before backend setup;
+  evaluation refusal preserves the indexed manifest and creates no results.
+  Begin incremental-index consistency lessons with a temporary-store experiment:
+  an unchanged file hash does not establish that all prior chunks still exist.
 
 - **2026-11-04** — Evaluation execution now verifies the recorded embedding
   model and requested endpoint against a read-only registry before output or
