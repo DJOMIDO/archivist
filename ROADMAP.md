@@ -5,16 +5,16 @@ Update this file whenever the plan changes, and add an entry to the [Changelog](
 
 **Status legend:** ⬜ Not started · 🟡 In progress · ✅ Done · ⏸️ Deferred
 
-| Milestone | Title                          | Status | Branch                         |
-|-----------|--------------------------------|--------|--------------------------------|
-| M0        | Project scaffolding            | ✅     | `chore/project-scaffolding`    |
-| M1        | Minimal RAG pipeline (MD/TXT)  | ✅     | `feat/minimal-rag-pipeline`    |
-| M1.5      | Local model runtime evaluation | ✅     | `refactor/openai-compatible-llm-provider` |
-| M2        | Evaluation baseline            | ✅     | `feat/eval-baseline`           |
-| M3        | Multi-format ingestion         | 🟡     | `feat/multi-format-loaders`    |
-| M4        | Agentic RAG with LangGraph     | ⬜     | `feat/langgraph-agent`         |
-| M5        | Retrieval quality              | ⬜     | `feat/retrieval-improvements`  |
-| M6        | Web UI (Streamlit)             | ⬜     | `feat/streamlit-ui`            |
+| Milestone | Title | Status | Branch |
+| --- | --- | --- | --- |
+| M0 | Project scaffolding | ✅ | `chore/project-scaffolding` |
+| M1 | Minimal RAG pipeline (MD/TXT) | ✅ | `feat/minimal-rag-pipeline` |
+| M1.5 | Local model runtime evaluation | ✅ | `refactor/openai-compatible-llm-provider` |
+| M2 | Evaluation baseline | ✅ | `feat/eval-baseline` |
+| M3 | Multi-format ingestion | 🟡 | `feat/multi-format-loaders` |
+| M4 | Agentic RAG with LangGraph | ⬜ | `feat/langgraph-agent` |
+| M5 | Retrieval quality | ⬜ | `feat/retrieval-improvements` |
+| M6 | Web UI (Streamlit) | ⬜ | `feat/streamlit-ui` |
 
 Large milestones may be split into several smaller branches; record them under the milestone.
 
@@ -201,7 +201,7 @@ local OpenAI-compatible server.
 **Verified quantization comparison (2026-11-02):**
 
 | Metric | MLX 8-bit | MLX 4-bit |
-|--------|-----------|-----------|
+| --- | --- | --- |
 | Candidate model | `archivist/qwen35-8bit` | `archivist/qwen35-4bit` |
 | Run | `20261102T104331523050Z` | `20261102T105018572021Z` |
 | Grading batch | `20261102T104456095520Z` | `20261102T105639547639Z` |
@@ -243,7 +243,7 @@ retrieval k=4 with no distance threshold. Judge: the same model/variant at
 temperature 0, thinking off, using rubric `reference-v1`.
 
 | Metric | Result |
-|--------|--------|
+| --- | --- |
 | Corpus / cases | 6 documents / 12 questions |
 | Mean source recall | 100% across 9 answerable cases |
 | Reference-grade coverage | 12/12 |
@@ -368,7 +368,12 @@ recorded baseline above. Its reviews remain separate from the newer run.
   - [x] Compare expected/actual chunk ID sets, including equal-count mismatches
   - [x] Detect replaced chunk text despite unchanged IDs using per-chunk digests
   - [x] Extract a pure chunk text-manifest builder with duplicate-ID/length checks
-  - [ ] Test chunk text-manifest construction before adding registry persistence
+  - [x] Test chunk text-manifest construction before adding registry persistence
+  - [x] Verify standalone SQLite chunk-manifest persistence across connections
+  - [x] Extract source-keyed manifest initialization/read/upsert with strict JSON types
+  - [x] Test manifest persistence, replacement, missing/empty distinction, and invalid data
+  - [x] Extract read-only source manifest comparison against Chroma IDs/text
+  - [ ] Test source comparison across missing/empty/matching/damaged indexes
   - [ ] Guard skipping with index configuration compatibility and registry/vector consistency checks
 - [ ] CLI: `archivist list`, `archivist remove <source>`
 - [x] Include page/section in answer context and displayed citations
@@ -452,6 +457,41 @@ recorded baseline above. Its reviews remain separate from the newer run.
 ---
 
 ## Changelog
+
+- **2026-11-08** — The owner verified source-manifest comparison in the
+  smoke script. Next add nine real-Chroma/fake-embedding cases for absent
+  versus empty manifests, matching/damaged data, unrelated sources, and
+  read-only storage preservation. Candidate pipeline tests pass (23 cases);
+  owner entry and final commit checks remain pending.
+
+- **2026-11-08** — Verified all 25 registry cases, including strict manifest
+  persistence and rejection paths. Next extract `source_manifest_matches`:
+  compare the saved source manifest with source-filtered Chroma IDs/text;
+  an absent manifest never counts as a match. This read-only comparison does
+  not validate metadata or embedding values and is not yet an ingestion skip.
+
+- **2026-11-08** — Confirmed manifest initialization/read/upsert extraction.
+  Next add persistence, source-isolation, whole-manifest replacement,
+  missing/empty, invalid-input preservation, and corrupt-JSON read tests.
+  Fixed eleven MD060 table-format diagnostics using the installed markdownlint
+  engine; existing long-line diagnostics are separate from these table warnings.
+
+- **2026-11-08** — Verified the owner's standalone manifest round trip through
+  a new read-only connection. Next extract source-keyed manifest storage into
+  registry.py, preserving missing (`None`) versus saved empty (`{}`) manifests,
+  using strict string-to-string JSON validation and source-keyed replacement.
+  Production ingestion and atomic file-record/manifest saves remain pending.
+
+- **2026-11-08** — Resume M3 in lesson mode at the pending standalone SQLite
+  chunk-manifest persistence experiment. Keep the agreed six remaining commit
+  themes: manifest persistence/consistency, unchanged-file skipping, changed-file
+  replacement, list, remove, and mixed-format/M2 evaluation/documentation closeout.
+  The owner enters implementation code; agents maintain the roadmap directly.
+
+- **2026-11-04** — Verified all ten chunk-manifest unit cases on the committed
+  implementation. Continue M3 in small steps within the six agreed remaining
+  commit themes. The next standalone experiment saves a source-keyed JSON
+  manifest and reads it back through a new read-only SQLite connection.
 
 - **2026-11-04** — Confirmed the pure chunk-manifest builder and smoke-script
   integration are present. The next lesson adds ten offline cases covering

@@ -10,6 +10,7 @@ from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_core.vectorstores import VectorStore
 
+from archivist.chunk_manifest import build_chunk_manifest
 from archivist.index_profile import IndexProfile
 from archivist.indexing import index_chunks
 from archivist.loaders import find_files, load_file
@@ -21,6 +22,7 @@ from archivist.metadata import (
 from archivist.qa import Answer, answer_question
 from archivist.registry import (
     ensure_index_profile,
+    get_chunk_manifest,
     get_index_profile,
     save_record,
 )
@@ -67,6 +69,21 @@ def ensure_query_compatible(
         raise ValueError("Query embedding configuration does not match the index")
 
     return stored
+
+
+def source_manifest_matches(
+    vector_store: Chroma, registry: sqlite3.Connection, source: str
+) -> bool:
+    """Compare a source's saved chunk IDs/text digests with Chroma, read-only."""
+    expected = get_chunk_manifest(registry, source)
+    if expected is None:
+        return False
+
+    result = vector_store.get(where={"source": source}, include=["documents"])
+    if result["documents"] is None:
+        raise ValueError("Vector store did not return chunk documents")
+    actual = build_chunk_manifest(result["ids"], result["documents"])
+    return actual == expected
 
 
 def ingest(

@@ -9,10 +9,12 @@ from archivist.index_profile import IndexProfile, fingerprint_index_profile
 from archivist.metadata import FileMetadata
 from archivist.registry import (
     ensure_index_profile,
+    get_chunk_manifest,
     get_content_status,
     get_index_profile,
     get_record,
     initialize_registry,
+    save_chunk_manifest,
     save_record,
 )
 
@@ -205,3 +207,68 @@ def test_index_profile_cannot_relabel_existing_file_records(
 
     assert get_index_profile(connection) is None
     assert get_record(connection, record.source) == record
+
+
+def test_chunk_manifest_persists_after_reopening(tmp_path: Path):
+    path = tmp_path / "registry.sqlite3"
+    source = "/notes/owner's guide.md"
+    expected = {"chunk-1": "a" * 64, "chunk-2": "b" * 64}
+    with closing(sqlite3.connect(path)) as connection:
+        initialize_registry(connection)
+        save_chunk_manifest(connection, source, expected)
+
+    uri = path.resolve().as_uri() + "?mode=ro"
+    with closing(sqlite3.connect(uri, uri=True)) as connection:
+        assert get_chunk_manifest(connection, source) == expected
+        assert connection.total_changes == 0
+
+
+def test_chunk_manifest_distinguishes_missing_and_empty(connection):
+    assert get_chunk_manifest(connection, "/notes/empty.md") is None
+
+    save_chunk_manifest(connection, "/notes/empty.md", {})
+
+    assert get_chunk_manifest(connection, "/notes/empty.md") == {}
+    assert get_chunk_manifest(connection, "/notes/unknown.md") is None
+
+
+@pytest.mark.parametrize("replacement", [{"new-chunk": "c" * 64}, {}])
+def test_chunk_manifest_replacement_preserves_other_sources(connection, replacement):
+    source = "/notes/first.md"
+    other = "/notes/second.md"
+    save_chunk_manifest(connection, source, {"old-chunk": "a" * 64})
+    save_chunk_manifest(connection, other, {"other-chunk": "b" * 64})
+
+    save_chunk_manifest(connection, source, replacement)
+
+    assert get_chunk_manifest(connection, source) == replacement
+    assert get_chunk_manifest(connection, other) == {"other-chunk": "b" * 64}
+    assert connection.execute("SELECT COUNT(*) FROM chunk_manifests").fetchone()[0] == 2
+
+
+@pytest.mark.parametrize("invalid", [[], {"chunk-1": 123}, {123: "a" * 64}])
+def test_invalid_chunk_manifest_save_preserves_registry(connection, invalid):
+    source = "/notes/first.md"
+    save_chunk_manifest(connection, source, {"old-chunk": "a" * 64})
+    before = tuple(connection.iterdump())
+
+    with pytest.raises(ValueError):
+        save_chunk_manifest(connection, source, invalid)
+
+    assert tuple(connection.iterdump()) == before
+
+
+@pytest.mark.parametrize("serialized", ["not json", "[]", "null", '{"chunk-1": 123}'])
+def test_chunk_manifest_read_rejects_corrupt_data(connection, serialized):
+    source = "/notes/corrupt.md"
+    with connection:
+        connection.execute(
+            "INSERT INTO chunk_manifests (source, manifest_json) VALUES (?, ?)",
+            (source, serialized),
+        )
+    before = tuple(connection.iterdump())
+
+    with pytest.raises(ValueError):
+        get_chunk_manifest(connection, source)
+
+    assert tuple(connection.iterdump()) == before

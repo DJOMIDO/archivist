@@ -11,6 +11,7 @@ from langchain_core.embeddings import DeterministicFakeEmbedding
 from langchain_core.language_models import FakeListChatModel
 
 from archivist import pipeline
+from archivist.chunk_manifest import build_chunk_manifest
 from archivist.index_profile import IndexProfile
 from archivist.metadata import build_file_metadata, hash_file
 from archivist.registry import (
@@ -18,6 +19,7 @@ from archivist.registry import (
     get_index_profile,
     get_record,
     initialize_registry,
+    save_chunk_manifest,
     save_record,
 )
 
@@ -307,3 +309,64 @@ def test_query_compatibility_is_read_only(
         assert readonly.total_changes == 0
 
     assert tuple(registry.iterdump()) == before
+
+
+@pytest.mark.parametrize(
+    ("scenario", "expected"),
+    [
+        ("missing_manifest", False),
+        ("unknown_empty", False),
+        ("empty_manifest", True),
+        ("empty_manifest_with_vectors", False),
+        ("matching", True),
+        ("missing_chunk", False),
+        ("changed_text", False),
+        ("extra_chunk", False),
+        ("wrong_id", False),
+    ],
+)
+def test_source_manifest_comparison_is_read_only(
+    store, registry, tmp_path, scenario, expected
+):
+    source = "/notes/first.md"
+    ids = ["first-1", "first-2"]
+    texts = ["First chunk", "Second chunk"]
+    store.add_documents(
+        [Document(page_content="Other source", metadata={"source": "/notes/other.md"})],
+        ids=["other-1"],
+    )
+    if scenario not in {"unknown_empty", "empty_manifest"}:
+        store.add_documents(
+            [
+                Document(page_content=text, metadata={"source": source})
+                for text in texts
+            ],
+            ids=ids,
+        )
+
+    if scenario not in {"missing_manifest", "unknown_empty"}:
+        manifest = (
+            {}
+            if scenario in {"empty_manifest", "empty_manifest_with_vectors"}
+            else build_chunk_manifest(ids, texts)
+        )
+        save_chunk_manifest(registry, source, manifest)
+
+    if scenario in {"missing_chunk", "wrong_id"}:
+        store.delete(ids=["first-2"])
+    if scenario in {"changed_text", "extra_chunk", "wrong_id"}:
+        changed_id = "first-2" if scenario == "changed_text" else "unexpected"
+        store.add_documents(
+            [Document(page_content="Unexpected text", metadata={"source": source})],
+            ids=[changed_id],
+        )
+
+    registry_before = tuple(registry.iterdump())
+    vectors_before = store.get(include=["documents", "metadatas"])
+    uri = (tmp_path / "registry.sqlite3").resolve().as_uri() + "?mode=ro"
+    with closing(sqlite3.connect(uri, uri=True)) as readonly:
+        assert pipeline.source_manifest_matches(store, readonly, source) is expected
+        assert readonly.total_changes == 0
+
+    assert tuple(registry.iterdump()) == registry_before
+    assert store.get(include=["documents", "metadatas"]) == vectors_before

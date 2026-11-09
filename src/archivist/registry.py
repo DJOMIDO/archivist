@@ -1,10 +1,15 @@
 """Store file-level ingestion records in SQLite."""
 
+import json
 import sqlite3
 from typing import Literal
 
+from pydantic import TypeAdapter
+
 from archivist.index_profile import IndexProfile, fingerprint_index_profile
 from archivist.metadata import FileMetadata
+
+_CHUNK_MANIFEST_ADAPTER = TypeAdapter(dict[str, str])
 
 
 def initialize_registry(connection: sqlite3.Connection) -> None:
@@ -25,6 +30,14 @@ def initialize_registry(connection: sqlite3.Connection) -> None:
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 profile_json TEXT NOT NULL,
                 fingerprint TEXT NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS chunk_manifests (
+                source TEXT PRIMARY KEY NOT NULL,
+                manifest_json TEXT NOT NULL
             )
             """
         )
@@ -120,3 +133,34 @@ def ensure_index_profile(connection: sqlite3.Connection, profile: IndexProfile) 
             (profile.model_dump_json(), fingerprint_index_profile(profile)),
         )
     return True
+
+
+def get_chunk_manifest(
+    connection: sqlite3.Connection, source: str
+) -> dict[str, str] | None:
+    """Read a source's text manifest, preserving missing versus empty."""
+    row = connection.execute(
+        "SELECT manifest_json FROM chunk_manifests WHERE source = ?",
+        (source,),
+    ).fetchone()
+    if row is None:
+        return None
+    return _CHUNK_MANIFEST_ADAPTER.validate_json(row[0], strict=True)
+
+
+def save_chunk_manifest(
+    connection: sqlite3.Connection, source: str, manifest: dict[str, str]
+) -> None:
+    """Insert or replace a source's text manifest and commit the write."""
+    validated = _CHUNK_MANIFEST_ADAPTER.validate_python(manifest, strict=True)
+    serialized = json.dumps(validated, sort_keys=True, ensure_ascii=False)
+    with connection:
+        connection.execute(
+            """
+            INSERT INTO chunk_manifests (source, manifest_json)
+            VALUES (?, ?)
+            ON CONFLICT(source) DO UPDATE SET
+                manifest_json = excluded.manifest_json
+            """,
+            (source, serialized),
+        )
